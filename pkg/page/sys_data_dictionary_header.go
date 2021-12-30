@@ -1,5 +1,7 @@
 package page
 
+import "encoding/json"
+
 type DictionaryHeader struct {
 	DictHdrRowId      uint64 //8
 	DictHdrTableId    uint64 //8
@@ -45,4 +47,19 @@ func (t *DictionaryHeaderPage) DictionaryHeader() *DictionaryHeader {
 	}
 
 	return dictionaryHeader
+}
+
+func (t *DictionaryHeaderPage) String() string {
+	type Page struct {
+		FILHeader        *FILHeader
+		DictionaryHeader *DictionaryHeader
+		FILTrailer       *FILTrailer
+	}
+
+	b, _ := json.MarshalIndent(&Page{
+		FILHeader:        t.FilHeader(),
+		DictionaryHeader: t.DictionaryHeader(),
+		FILTrailer:       t.FILTrailer(),
+	}, "", "  ")
+	return string(b)
 }

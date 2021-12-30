@@ -1,5 +1,7 @@
 package page
 
+import "encoding/json"
+
 type InodeEntry struct {
 	FsegId           uint64
 	FsegNotFullNUsed uint32
@@ -47,4 +49,19 @@ func (t *InodePage) InodeEntry() []*InodeEntry {
 	}
 
 	return inodeEntries
+}
+
+func (t *InodePage) String() string {
+	type Page struct {
+		FILHeader    *FILHeader
+		InodeEntries []*InodeEntry
+		FILTrailer   *FILTrailer
+	}
+
+	b, _ := json.MarshalIndent(&Page{
+		FILHeader:    t.FilHeader(),
+		InodeEntries: t.InodeEntry(),
+		FILTrailer:   t.FILTrailer(),
+	}, "", "  ")
+	return string(b)
 }

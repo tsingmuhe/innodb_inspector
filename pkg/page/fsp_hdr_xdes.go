@@ -1,5 +1,9 @@
 package page
 
+import (
+	"encoding/json"
+)
+
 const (
 	XDESStateFree     XDESState = 1
 	XDESStateFreeFrag XDESState = 2
@@ -59,6 +63,10 @@ func (f *FspHdrXdesPage) IsFspHdr() bool {
 }
 
 func (f *FspHdrXdesPage) FSPHeader() *FSPHeader {
+	if !f.IsFspHdr() {
+		return nil
+	}
+
 	c := f.CursorAtBodyStart()
 	return &FSPHeader{
 		SpaceId:       c.Uint32(),
@@ -98,5 +106,18 @@ func (f *FspHdrXdesPage) XDESEntry() []*XDESEntry {
 }
 
 func (f *FspHdrXdesPage) String() string {
-	return ""
+	type Page struct {
+		FILHeader   *FILHeader
+		FSPHeader   *FSPHeader
+		XDESEntries []*XDESEntry
+		FILTrailer  *FILTrailer
+	}
+
+	b, _ := json.MarshalIndent(&Page{
+		FILHeader:   f.FilHeader(),
+		FSPHeader:   f.FSPHeader(),
+		XDESEntries: f.XDESEntry(),
+		FILTrailer:  f.FILTrailer(),
+	}, "", "  ")
+	return string(b)
 }

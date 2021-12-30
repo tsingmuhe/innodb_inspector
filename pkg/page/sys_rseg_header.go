@@ -1,5 +1,7 @@
 package page
 
+import "encoding/json"
+
 type RsegHeader struct {
 	MaxSize     uint32
 	HistorySize uint32
@@ -23,4 +25,19 @@ func (t *SysRsegHeaderPage) RsegHeader() *RsegHeader {
 			FsegHdrOffset: c.Uint16(),
 		},
 	}
+}
+
+func (t *SysRsegHeaderPage) String() string {
+	type Page struct {
+		FILHeader  *FILHeader
+		RsegHeader *RsegHeader
+		FILTrailer *FILTrailer
+	}
+
+	b, _ := json.MarshalIndent(&Page{
+		FILHeader:  t.FilHeader(),
+		RsegHeader: t.RsegHeader(),
+		FILTrailer: t.FILTrailer(),
+	}, "", "  ")
+	return string(b)
 }
