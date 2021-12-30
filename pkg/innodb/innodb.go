@@ -1,63 +1,114 @@
 package innodb
 
 import (
+	"encoding/binary"
+	"errors"
 	"innodb_inspector/pkg/page"
-	"io"
 	"os"
 )
 
-const (
-	initPageNo uint32 = 0
+func ParsePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) page.Page {
+	basePage := page.NewBasePage(fspHeaderSpaceId, pageNo, pageBits)
 
-	insertBufferHeaderPageNo      = 3
-	insertBufferRootPageNo        = 4
-	transactionSystemHeaderPageNo = 5
-	firstRollbackSegmentPageNo    = 6
-	dataDictionaryHeaderPageNo    = 7
-
-	doubleWriteBufferPageNo1 = 64
-	doubleWriteBufferPageNo2 = 192
-
-	rootPageOfFirstIndexPageNo  = 3
-	rootPageOfSecondIndexPageNo = 4
-)
-
-type Tablespace struct {
-	filePath string
-	pageSize uint
+	pageType := basePage.Type()
+	switch pageType {
+	case page.FilPageTypeFspHdr:
+		return &page.FspHdrXdesPage{
+			BasePage: basePage,
+		}
+	case page.FilPageInode:
+		return &page.InodePage{
+			BasePage: basePage,
+		}
+	case page.FilPageTypeSys:
+		switch pageNo {
+		case page.InsertBufferHeaderPageNo:
+			return &page.IBufHeaderPage{
+				BasePage: basePage,
+			}
+		case page.FirstRollbackSegmentPageNo:
+			return &page.SysRsegHeaderPage{
+				BasePage: basePage,
+			}
+		case page.DataDictionaryHeaderPageNo:
+			return &page.DictionaryHeaderPage{
+				BasePage: basePage,
+			}
+		default:
+			return basePage
+		}
+	default:
+		return basePage
+	}
 }
 
-func (t *Tablespace) FSPHeaderSpaceId() uint32 {
-	var fspHeaderSpaceId uint32
+func PageDetail(filePath string, targetPageNo, pageSize uint32) (string, error) {
+	dbFile, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer dbFile.Close()
 
-	t.ForeachPage(func(pageNo uint32, data []byte) (bool, error) {
-		c := page.NewCursor(data, 34)
-		fspHeaderSpaceId = c.Uint32()
-		return true, nil
-	})
+	fspHeaderSpaceId, err := resolveFspHeaderSpaceId(dbFile)
+	if err != nil {
+		return "", err
+	}
 
-	return fspHeaderSpaceId
+	buf := make([]byte, pageSize)
+	n, _ := dbFile.ReadAt(buf, int64(targetPageNo*pageSize))
+	if n <= 0 {
+		return "", errors.New("bad file")
+	}
+
+	pg := ParsePage(fspHeaderSpaceId, targetPageNo, buf)
+	return pg.String(), nil
 }
 
-func (t *Tablespace) OverView() ([]*PageDesc, error) {
+type PageDesc struct {
+	PageNo    uint32
+	PageType  page.Type
+	SpaceId   uint32
+	PageNotes string
+}
+
+func OverView(filePath string, pageSize uint32) ([]*PageDesc, error) {
+	dbFile, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer dbFile.Close()
+
+	fspHeaderSpaceId, err := resolveFspHeaderSpaceId(dbFile)
+	if err != nil {
+		return nil, err
+	}
+
+	dbFileStat, _ := dbFile.Stat()
+	dbFileSize := dbFileStat.Size()
+	pageCount := uint32(dbFileSize) / pageSize
+
+	buf := make([]byte, pageSize)
 	var pds []*PageDesc
-	fspHeaderSpaceId := t.FSPHeaderSpaceId()
 
-	t.ForeachPage(func(pageNo uint32, data []byte) (bool, error) {
-		pg := page.Parse(fspHeaderSpaceId, pageNo, data)
+	for pageNo := uint32(0); pageNo < pageCount; pageNo++ {
+		n, _ := dbFile.ReadAt(buf, int64(pageNo*pageSize))
+		if n <= 0 {
+			return nil, errors.New("bad file")
+		}
+
+		pg := ParsePage(fspHeaderSpaceId, pageNo, buf)
 		pds = append(pds, &PageDesc{
 			PageNo:    pg.PageNo(),
 			PageType:  pg.Type(),
 			SpaceId:   pg.SpaceId(),
-			PageNotes: t.PageNotes(pg),
+			PageNotes: pageNotes(pg),
 		})
-		return false, nil
-	})
+	}
 
 	return pds, nil
 }
 
-func (t *Tablespace) PageNotes(pg page.Page) string {
+func pageNotes(pg page.Page) string {
 	pageNo := pg.PageNo()
 
 	if pg.IsSysTablespace() {
@@ -89,67 +140,15 @@ func (t *Tablespace) PageNotes(pg page.Page) string {
 	case page.RootPageOfSecondIndexPageNo:
 		return "root page of second index"
 	}
+
 	return ""
 }
 
-func (t *Tablespace) PageDetail(targetPageNo uint32) (string, error) {
-	var pageDetail string
-	fspHeaderSpaceId := t.FSPHeaderSpaceId()
-
-	t.ForeachPage(func(pageNo uint32, data []byte) (bool, error) {
-		if pageNo == targetPageNo {
-			pg := page.Parse(fspHeaderSpaceId, pageNo, data)
-			pageDetail = pg.String()
-			return true, nil
-		}
-
-		return false, nil
-	})
-
-	return pageDetail, nil
-}
-
-func (t *Tablespace) ForeachPage(handle func(uint32, []byte) (bool, error)) error {
-	f, err := os.Open(t.filePath)
+func resolveFspHeaderSpaceId(dbFile *os.File) (uint32, error) {
+	buf := make([]byte, 4)
+	_, err := dbFile.ReadAt(buf, 34)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	defer f.Close()
-
-	buf := make([]byte, t.pageSize)
-	pageNo := initPageNo
-
-	for {
-		switch n, err := f.Read(buf); true {
-		case n > 0:
-			breakLoop, err := handle(pageNo, buf)
-			if err != nil {
-				return err
-			}
-
-			if breakLoop {
-				break
-			}
-		case n == 0 && err == io.EOF: // EOF
-			return nil
-		case err != nil:
-			return err
-		}
-
-		pageNo++
-	}
-}
-
-type PageDesc struct {
-	PageNo    uint32
-	PageType  page.Type
-	SpaceId   uint32
-	PageNotes string
-}
-
-func NewTablespace(filePath string) *Tablespace {
-	return &Tablespace{
-		filePath: filePath,
-		pageSize: page.DefaultSize,
-	}
+	return binary.BigEndian.Uint32(buf), nil
 }

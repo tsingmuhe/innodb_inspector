@@ -6,11 +6,11 @@ import (
 	"github.com/alexeyco/simpletable"
 	"github.com/spf13/cobra"
 	"innodb_inspector/pkg/innodb"
+	"innodb_inspector/pkg/page"
 )
 
 func overView(cmd *cobra.Command, filePath string) error {
-	ts := innodb.NewTablespace(filePath)
-	pds, err := ts.OverView()
+	pds, err := innodb.OverView(filePath, page.DefaultSize)
 	if err != nil {
 		return errors.New("bad innodb file")
 	}

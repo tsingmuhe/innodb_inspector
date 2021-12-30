@@ -8,7 +8,7 @@ import (
 const (
 	UndefinedPageNo = 4294967295
 
-	DefaultSize uint = 1024 * 16 //Default InnoDB Page 16K
+	DefaultSize uint32 = 1024 * 16 //Default InnoDB Page 16K
 )
 
 const (
@@ -55,6 +55,14 @@ type BasePage struct {
 	fspHeaderSpaceId uint32
 	pageNo           uint32
 	pageBits         []byte
+}
+
+func NewBasePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) *BasePage {
+	return &BasePage{
+		fspHeaderSpaceId: fspHeaderSpaceId,
+		pageNo:           pageNo,
+		pageBits:         pageBits,
+	}
 }
 
 func (f *BasePage) FSPHeaderSpaceId() uint32 {
@@ -127,45 +135,6 @@ func (f *BasePage) FILTrailer() *FILTrailer {
 	return &FILTrailer{
 		OldStyleChecksum: c.Uint32(),
 		Low32BitsOfLSN:   c.Uint32(),
-	}
-}
-
-func Parse(fspHeaderSpaceId, pageNo uint32, pageBits []byte) Page {
-	basePage := &BasePage{
-		fspHeaderSpaceId: fspHeaderSpaceId,
-		pageNo:           pageNo,
-		pageBits:         pageBits,
-	}
-
-	pageType := basePage.Type()
-	switch pageType {
-	case FilPageTypeFspHdr:
-		return &FspHdrXdesPage{
-			BasePage: basePage,
-		}
-	case FilPageInode:
-		return &InodePage{
-			BasePage: basePage,
-		}
-	case FilPageTypeSys:
-		switch pageNo {
-		case InsertBufferHeaderPageNo:
-			return &IBufHeaderPage{
-				BasePage: basePage,
-			}
-		case FirstRollbackSegmentPageNo:
-			return &SysRsegHeaderPage{
-				BasePage: basePage,
-			}
-		case DataDictionaryHeaderPageNo:
-			return &DictionaryHeaderPage{
-				BasePage: basePage,
-			}
-		default:
-			return basePage
-		}
-	default:
-		return basePage
 	}
 }
 
