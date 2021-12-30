@@ -58,7 +58,7 @@ func (f *BasePage) PageNo() uint32 {
 }
 
 func (f *BasePage) Type() Type {
-	return Type(f.Cursor().Seek(24).Uint16())
+	return Type(f.CursorAt(24).Uint16())
 }
 
 func (f *BasePage) Size() int {
@@ -66,7 +66,7 @@ func (f *BasePage) Size() int {
 }
 
 func (f *BasePage) SpaceId() uint32 {
-	return f.Cursor().Seek(34).Uint32()
+	return f.CursorAt(34).Uint32()
 }
 
 func (f *BasePage) IsSysTablespace() bool {
@@ -88,7 +88,7 @@ func (f *BasePage) FilHeader() *FILHeader {
 }
 
 func (f *BasePage) FILTrailer() *FILTrailer {
-	c := f.Cursor().Seek(FilTrailerPosition)
+	c := f.CursorAt(FilTrailerPosition)
 	return &FILTrailer{
 		OldStyleChecksum: c.Uint32(),
 		Low32BitsOfLSN:   c.Uint32(),

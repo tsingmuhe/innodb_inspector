@@ -9,15 +9,6 @@ type Cursor struct {
 	position uint32
 }
 
-func (t *Cursor) Seek(position uint32) *Cursor {
-	if position >= 0 {
-		t.position = position
-	} else {
-		t.position = 0
-	}
-	return t
-}
-
 func (t *Cursor) Skip(delta uint32) *Cursor {
 	t.position = t.position + delta
 	return t
