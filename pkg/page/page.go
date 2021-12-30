@@ -18,39 +18,51 @@ const (
 	FilHeaderSize  = 4 + 4 + 4 + 4 + 8 + 2 + 8 + 4
 	FilTrailerSize = 4 + 4
 )
+const (
+	InsertBufferHeaderPageNo      = 3
+	InsertBufferRootPageNo        = 4
+	TransactionSystemHeaderPageNo = 5
+	FirstRollbackSegmentPageNo    = 6
+	DataDictionaryHeaderPageNo    = 7
 
-type FILHeader struct {
-	FilPageSpaceOrChksum      uint32
-	FilPageOffset             uint32
-	FilPagePrev               uint32
-	FilPageNext               uint32
-	FilPageLSN                uint64
-	FilPageType               Type
-	FilPageFileFlushLSN       uint64
-	FilPageArchLogNoOrSpaceId uint32
-}
+	DoubleWriteBufferPageNo1 = 64
+	DoubleWriteBufferPageNo2 = 192
 
-type FILTrailer struct {
-	OldStyleChecksum uint32
-	Low32BitsOfLSN   uint32
-}
+	RootPageOfFirstIndexPageNo  = 3
+	RootPageOfSecondIndexPageNo = 4
+)
 
 type Page interface {
+	FSPHeaderSpaceId() uint32
+	SpaceId() uint32
 	PageNo() uint32
 	Type() Type
-	Size() int
-	SpaceId() uint32
+
+	String() string
+
 	IsSysTablespace() bool
+	IsDoubleWriteBufferBlock() bool
+
+	Cursor() *Cursor
+	CursorAt(position uint32) *Cursor
+	CursorAtBodyStart() *Cursor
+
 	FilHeader() *FILHeader
 	FILTrailer() *FILTrailer
-	Cursor() *Cursor
-	String() string
-	Notes() string
 }
 
 type BasePage struct {
-	pageNo   uint32
-	pageBits []byte
+	fspHeaderSpaceId uint32
+	pageNo           uint32
+	pageBits         []byte
+}
+
+func (f *BasePage) FSPHeaderSpaceId() uint32 {
+	return f.fspHeaderSpaceId
+}
+
+func (f *BasePage) SpaceId() uint32 {
+	return f.CursorAt(34).Uint32()
 }
 
 func (f *BasePage) PageNo() uint32 {
@@ -61,16 +73,39 @@ func (f *BasePage) Type() Type {
 	return Type(f.CursorAt(24).Uint16())
 }
 
-func (f *BasePage) Size() int {
-	return len(f.pageBits) * 8
-}
-
-func (f *BasePage) SpaceId() uint32 {
-	return f.CursorAt(34).Uint32()
+func (f *BasePage) String() string {
+	return ""
 }
 
 func (f *BasePage) IsSysTablespace() bool {
-	return f.SpaceId() == 0
+	return f.fspHeaderSpaceId == 0
+}
+
+func (f *BasePage) IsDoubleWriteBufferBlock() bool {
+	return f.fspHeaderSpaceId == 0 &&
+		f.pageNo >= DoubleWriteBufferPageNo1 &&
+		f.pageNo < DoubleWriteBufferPageNo2
+}
+
+func (f *BasePage) Cursor() *Cursor {
+	return &Cursor{
+		data:     f.pageBits,
+		position: 0,
+	}
+}
+
+func (f *BasePage) CursorAt(position uint32) *Cursor {
+	return &Cursor{
+		data:     f.pageBits,
+		position: position,
+	}
+}
+
+func (f *BasePage) CursorAtBodyStart() *Cursor {
+	return &Cursor{
+		data:     f.pageBits,
+		position: FilHeaderSize,
+	}
 }
 
 func (f *BasePage) FilHeader() *FILHeader {
@@ -95,44 +130,59 @@ func (f *BasePage) FILTrailer() *FILTrailer {
 	}
 }
 
-func (f *BasePage) Cursor() *Cursor {
-	return &Cursor{
-		data:     f.pageBits,
-		position: 0,
+func Parse(fspHeaderSpaceId, pageNo uint32, pageBits []byte) Page {
+	basePage := &BasePage{
+		fspHeaderSpaceId: fspHeaderSpaceId,
+		pageNo:           pageNo,
+		pageBits:         pageBits,
+	}
+
+	pageType := basePage.Type()
+	switch pageType {
+	case FilPageTypeFspHdr:
+		return &FspHdrXdesPage{
+			BasePage: basePage,
+		}
+	case FilPageInode:
+		return &InodePage{
+			BasePage: basePage,
+		}
+	case FilPageTypeSys:
+		switch pageNo {
+		case InsertBufferHeaderPageNo:
+			return &IBufHeaderPage{
+				BasePage: basePage,
+			}
+		case FirstRollbackSegmentPageNo:
+			return &SysRsegHeaderPage{
+				BasePage: basePage,
+			}
+		case DataDictionaryHeaderPageNo:
+			return &DictionaryHeaderPage{
+				BasePage: basePage,
+			}
+		default:
+			return basePage
+		}
+	default:
+		return basePage
 	}
 }
 
-func (f *BasePage) CursorAt(position uint32) *Cursor {
-	return &Cursor{
-		data:     f.pageBits,
-		position: position,
-	}
+type FILHeader struct {
+	FilPageSpaceOrChksum      uint32
+	FilPageOffset             uint32
+	FilPagePrev               uint32
+	FilPageNext               uint32
+	FilPageLSN                uint64
+	FilPageType               Type
+	FilPageFileFlushLSN       uint64
+	FilPageArchLogNoOrSpaceId uint32
 }
 
-func (f *BasePage) CursorAtBodyStart() *Cursor {
-	return &Cursor{
-		data:     f.pageBits,
-		position: FilHeaderSize,
-	}
-}
-
-func (f *BasePage) String() string {
-	return ""
-}
-
-func (f *BasePage) Notes() string {
-	return ""
-}
-
-func NewBasePage(pageNo uint32, pageBits []byte) *BasePage {
-	return &BasePage{
-		pageNo:   pageNo,
-		pageBits: pageBits,
-	}
-}
-
-func IsUndefinedPageNo(pageNo uint32) bool {
-	return pageNo >= UndefinedPageNo
+type FILTrailer struct {
+	OldStyleChecksum uint32
+	Low32BitsOfLSN   uint32
 }
 
 //FlstBaseNode 16
@@ -167,4 +217,8 @@ func (t Bits) String() string {
 
 func (t Bits) MarshalText() ([]byte, error) {
 	return []byte(t.String()), nil
+}
+
+func IsUndefinedPageNo(pageNo uint32) bool {
+	return pageNo >= UndefinedPageNo
 }

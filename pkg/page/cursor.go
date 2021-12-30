@@ -9,6 +9,13 @@ type Cursor struct {
 	position uint32
 }
 
+func NewCursor(data []byte, position uint32) *Cursor {
+	return &Cursor{
+		data:     data,
+		position: position,
+	}
+}
+
 func (t *Cursor) Skip(delta uint32) *Cursor {
 	t.position = t.position + delta
 	return t

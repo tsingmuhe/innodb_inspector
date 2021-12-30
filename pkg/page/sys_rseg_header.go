@@ -1,5 +1,12 @@
 package page
 
+type RsegHeader struct {
+	MaxSize     uint32
+	HistorySize uint32
+	HistoryList *FlstBaseNode
+	FsegEntry   *FsegEntry
+}
+
 type SysRsegHeaderPage struct {
 	*BasePage
 }
@@ -16,11 +23,4 @@ func (t *SysRsegHeaderPage) RsegHeader() *RsegHeader {
 			FsegHdrOffset: c.Uint16(),
 		},
 	}
-}
-
-type RsegHeader struct {
-	MaxSize     uint32
-	HistorySize uint32
-	HistoryList *FlstBaseNode
-	FsegEntry   *FsegEntry
 }

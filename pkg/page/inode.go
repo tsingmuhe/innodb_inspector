@@ -1,5 +1,21 @@
 package page
 
+type InodeEntry struct {
+	FsegId           uint64
+	FsegNotFullNUsed uint32
+	FsegFree         *FlstBaseNode
+	FsegNotFull      *FlstBaseNode
+	FsegFull         *FlstBaseNode
+	FsegMagicN       uint32
+	FsegFragArr      []uint32
+}
+
+type FsegEntry struct {
+	FsegHdrSpace  uint32 //4
+	FsegHdrPageNo uint32 //4
+	FsegHdrOffset uint16 //2
+}
+
 type InodePage struct {
 	*BasePage
 }
@@ -31,20 +47,4 @@ func (t *InodePage) InodeEntry() []*InodeEntry {
 	}
 
 	return inodeEntries
-}
-
-type InodeEntry struct {
-	FsegId           uint64
-	FsegNotFullNUsed uint32
-	FsegFree         *FlstBaseNode
-	FsegNotFull      *FlstBaseNode
-	FsegFull         *FlstBaseNode
-	FsegMagicN       uint32
-	FsegFragArr      []uint32
-}
-
-type FsegEntry struct {
-	FsegHdrSpace  uint32 //4
-	FsegHdrPageNo uint32 //4
-	FsegHdrOffset uint16 //2
 }
