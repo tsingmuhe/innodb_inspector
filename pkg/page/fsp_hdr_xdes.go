@@ -9,9 +9,7 @@ func (f *FspHdrXdesPage) IsFspHdr() bool {
 }
 
 func (f *FspHdrXdesPage) FSPHeader() *FSPHeader {
-	c := f.Cursor()
-	c.Seek(FilHeaderSize)
-
+	c := f.CursorAtBodyStart()
 	return &FSPHeader{
 		SpaceId:       c.Uint32(),
 		Unused:        c.Uint32(),
@@ -29,8 +27,7 @@ func (f *FspHdrXdesPage) FSPHeader() *FSPHeader {
 }
 
 func (f *FspHdrXdesPage) XDESEntry() []*XDESEntry {
-	c := f.Cursor()
-	c.Seek(150)
+	c := f.CursorAt(150)
 
 	var xdesEntries []*XDESEntry
 
@@ -113,13 +110,4 @@ func (t XDESState) String() string {
 
 func (t XDESState) MarshalText() ([]byte, error) {
 	return []byte(t.String()), nil
-}
-
-func NewFspHdrXdesPage(pageNo uint32, pageBits []byte) *FspHdrXdesPage {
-	return &FspHdrXdesPage{
-		BasePage: &BasePage{
-			pageNo:   pageNo,
-			pageBits: pageBits,
-		},
-	}
 }

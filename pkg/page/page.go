@@ -5,6 +5,36 @@ import (
 	"strings"
 )
 
+const (
+	UndefinedPageNo = 4294967295
+
+	DefaultSize uint = 1024 * 16 //Default InnoDB Page 16K
+)
+
+const (
+	FilHeaderPosition  = 0
+	FilTrailerPosition = 0
+
+	FilHeaderSize  = 4 + 4 + 4 + 4 + 8 + 2 + 8 + 4
+	FilTrailerSize = 4 + 4
+)
+
+type FILHeader struct {
+	FilPageSpaceOrChksum      uint32
+	FilPageOffset             uint32
+	FilPagePrev               uint32
+	FilPageNext               uint32
+	FilPageLSN                uint64
+	FilPageType               Type
+	FilPageFileFlushLSN       uint64
+	FilPageArchLogNoOrSpaceId uint32
+}
+
+type FILTrailer struct {
+	OldStyleChecksum uint32
+	Low32BitsOfLSN   uint32
+}
+
 type Page interface {
 	PageNo() uint32
 	Type() Type
@@ -28,7 +58,7 @@ func (f *BasePage) PageNo() uint32 {
 }
 
 func (f *BasePage) Type() Type {
-	return f.Cursor().Seek(24).Uint16()
+	return Type(f.Cursor().Seek(24).Uint16())
 }
 
 func (f *BasePage) Size() int {
@@ -51,7 +81,7 @@ func (f *BasePage) FilHeader() *FILHeader {
 		FilPagePrev:               c.Uint32(),
 		FilPageNext:               c.Uint32(),
 		FilPageLSN:                c.Uint64(),
-		FilPageType:               c.Uint16(),
+		FilPageType:               Type(c.Uint16()),
 		FilPageFileFlushLSN:       c.Uint64(),
 		FilPageArchLogNoOrSpaceId: c.Uint32(),
 	}
@@ -72,12 +102,37 @@ func (f *BasePage) Cursor() *Cursor {
 	}
 }
 
+func (f *BasePage) CursorAt(position uint32) *Cursor {
+	return &Cursor{
+		data:     f.pageBits,
+		position: position,
+	}
+}
+
+func (f *BasePage) CursorAtBodyStart() *Cursor {
+	return &Cursor{
+		data:     f.pageBits,
+		position: FilHeaderSize,
+	}
+}
+
 func (f *BasePage) String() string {
 	return ""
 }
 
 func (f *BasePage) Notes() string {
 	return ""
+}
+
+func NewBasePage(pageNo uint32, pageBits []byte) *BasePage {
+	return &BasePage{
+		pageNo:   pageNo,
+		pageBits: pageBits,
+	}
+}
+
+func IsUndefinedPageNo(pageNo uint32) bool {
+	return pageNo >= UndefinedPageNo
 }
 
 //FlstBaseNode 16

@@ -3,16 +3,16 @@ package cmd
 import (
 	"errors"
 	"github.com/spf13/cobra"
-	"innodb_inspector/innodb/tablespace"
+	"innodb_inspector/pkg/innodb"
 )
 
 func pageDetail(cmd *cobra.Command, filePath string, pageNo uint32) error {
-	ts := tablespace.NewTablespace(filePath)
+	ts := innodb.NewTablespace(filePath)
 	detail, err := ts.PageDetail(pageNo)
 	if err != nil {
 		return errors.New("bad innodb file")
 	}
 
-	cmd.Println(string(detail))
+	cmd.Println(detail)
 	return nil
 }

@@ -5,25 +5,24 @@ import (
 	"fmt"
 	"github.com/alexeyco/simpletable"
 	"github.com/spf13/cobra"
-	"innodb_inspector/innodb/tablespace"
+	"innodb_inspector/pkg/innodb"
 )
 
 func overView(cmd *cobra.Command, filePath string) error {
-	ts := tablespace.NewTablespace(filePath)
-	rows, err := ts.OverView()
+	ts := innodb.NewTablespace(filePath)
+	pages, err := ts.OverView()
 	if err != nil {
 		return errors.New("bad innodb file")
 	}
 
 	cells := make([][]*simpletable.Cell, 0)
 
-	for _, row := range rows {
+	for _, row := range pages {
 		cells = append(cells, []*simpletable.Cell{
-			{Align: simpletable.AlignRight, Text: fmt.Sprintf("%d", row.PageNo)},
-			{Align: simpletable.AlignRight, Text: fmt.Sprintf("%d", row.FilPageOffset)},
-			{Text: fmt.Sprintf("%s", row.FilPageType)},
-			{Align: simpletable.AlignRight, Text: fmt.Sprintf("%d", row.SpaceId)},
-			{Text: row.Comments},
+			{Align: simpletable.AlignRight, Text: fmt.Sprintf("%d", row.PageNo())},
+			{Text: fmt.Sprintf("%s", row.Type())},
+			{Align: simpletable.AlignRight, Text: fmt.Sprintf("%d", row.SpaceId())},
+			{Text: row.Notes()},
 		})
 	}
 
@@ -38,7 +37,6 @@ func printTable(cmd *cobra.Command, cells [][]*simpletable.Cell) {
 	table.Header = &simpletable.Header{
 		Cells: []*simpletable.Cell{
 			{Align: simpletable.AlignCenter, Text: "PageNo"},
-			{Align: simpletable.AlignCenter, Text: "PageOffset"},
 			{Align: simpletable.AlignCenter, Text: "PageType"},
 			{Align: simpletable.AlignCenter, Text: "SpaceId"},
 			{Align: simpletable.AlignCenter, Text: "Comments"},

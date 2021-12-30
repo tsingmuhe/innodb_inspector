@@ -1,6 +1,8 @@
 package page
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
 type Cursor struct {
 	data     []byte
