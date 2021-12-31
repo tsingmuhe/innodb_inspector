@@ -6,7 +6,7 @@ import (
 	"github.com/alexeyco/simpletable"
 	"github.com/spf13/cobra"
 	"innodb_inspector/pkg/innodb"
-	"innodb_inspector/pkg/page"
+	"innodb_inspector/pkg/innodb/page"
 )
 
 func overView(cmd *cobra.Command, filePath string) error {
