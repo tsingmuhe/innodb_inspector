@@ -1,14 +1,17 @@
-package page
+package innodb
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"innodb_inspector/pkg/innodb/page"
+)
 
 type IBufHeaderPage struct {
 	*BasePage
 }
 
-func (t *IBufHeaderPage) FsegEntry() *FsegEntry {
+func (t *IBufHeaderPage) FsegEntry() *page.FsegEntry {
 	c := t.CursorAtBodyStart()
-	return &FsegEntry{
+	return &page.FsegEntry{
 		FsegHdrSpace:  c.Uint32(),
 		FsegHdrPageNo: c.Uint32(),
 		FsegHdrOffset: c.Uint16(),
@@ -17,9 +20,9 @@ func (t *IBufHeaderPage) FsegEntry() *FsegEntry {
 
 func (t *IBufHeaderPage) String() string {
 	type Page struct {
-		FILHeader  *FILHeader
-		FsegEntry  *FsegEntry
-		FILTrailer *FILTrailer
+		FILHeader  *page.FILHeader
+		FsegEntry  *page.FsegEntry
+		FILTrailer *page.FILTrailer
 	}
 
 	b, _ := json.MarshalIndent(&Page{

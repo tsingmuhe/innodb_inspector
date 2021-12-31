@@ -1,33 +1,20 @@
-package page
+package innodb
 
-import "encoding/json"
-
-type InodeEntry struct {
-	FsegId           uint64
-	FsegNotFullNUsed uint32
-	FsegFree         *FlstBaseNode
-	FsegNotFull      *FlstBaseNode
-	FsegFull         *FlstBaseNode
-	FsegMagicN       uint32
-	FsegFragArr      []uint32
-}
-
-type FsegEntry struct {
-	FsegHdrSpace  uint32 //4
-	FsegHdrPageNo uint32 //4
-	FsegHdrOffset uint16 //2
-}
+import (
+	"encoding/json"
+	"innodb_inspector/pkg/innodb/page"
+)
 
 type InodePage struct {
 	*BasePage
 }
 
-func (t *InodePage) InodeEntry() []*InodeEntry {
+func (t *InodePage) InodeEntry() []*page.InodeEntry {
 	c := t.CursorAt(50)
 
-	var inodeEntries []*InodeEntry
+	var inodeEntries []*page.InodeEntry
 	for i := 0; i < 85; i++ {
-		inodeEntry := &InodeEntry{
+		inodeEntry := &page.InodeEntry{
 			FsegId:           c.Uint64(),
 			FsegNotFullNUsed: c.Uint32(),
 			FsegFree:         c.FlstBaseNode(),
@@ -38,7 +25,7 @@ func (t *InodePage) InodeEntry() []*InodeEntry {
 
 		for i := 0; i < 32; i++ {
 			pageNo := c.Uint32()
-			if !IsUndefinedPageNo(pageNo) {
+			if !page.IsUndefinedPageNo(pageNo) {
 				inodeEntry.FsegFragArr = append(inodeEntry.FsegFragArr, pageNo)
 			}
 		}
@@ -53,9 +40,9 @@ func (t *InodePage) InodeEntry() []*InodeEntry {
 
 func (t *InodePage) String() string {
 	type Page struct {
-		FILHeader    *FILHeader
-		InodeEntries []*InodeEntry
-		FILTrailer   *FILTrailer
+		FILHeader    *page.FILHeader
+		InodeEntries []*page.InodeEntry
+		FILTrailer   *page.FILTrailer
 	}
 
 	b, _ := json.MarshalIndent(&Page{

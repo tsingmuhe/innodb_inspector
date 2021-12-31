@@ -1,7 +1,8 @@
-package page
+package innodb
 
 import (
 	"encoding/binary"
+	"innodb_inspector/pkg/innodb/page"
 )
 
 type Cursor struct {
@@ -39,27 +40,27 @@ func (t *Cursor) Bytes(delta uint32) []byte {
 	return result
 }
 
-func (t *Cursor) FlstBaseNode() *FlstBaseNode {
-	return &FlstBaseNode{
+func (t *Cursor) FlstBaseNode() *page.FlstBaseNode {
+	return &page.FlstBaseNode{
 		Len: t.Uint32(),
-		First: &Address{
+		First: &page.Address{
 			PageNo: t.Uint32(),
 			Offset: t.Uint16(),
 		},
-		Last: &Address{
+		Last: &page.Address{
 			PageNo: t.Uint32(),
 			Offset: t.Uint16(),
 		},
 	}
 }
 
-func (t *Cursor) FlstNode() *FlstNode {
-	return &FlstNode{
-		Pre: &Address{
+func (t *Cursor) FlstNode() *page.FlstNode {
+	return &page.FlstNode{
+		Pre: &page.Address{
 			PageNo: t.Uint32(),
 			Offset: t.Uint16(),
 		},
-		Next: &Address{
+		Next: &page.Address{
 			PageNo: t.Uint32(),
 			Offset: t.Uint16(),
 		},

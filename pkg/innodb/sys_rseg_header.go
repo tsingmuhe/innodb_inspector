@@ -1,25 +1,21 @@
-package page
+package innodb
 
-import "encoding/json"
-
-type RsegHeader struct {
-	MaxSize     uint32
-	HistorySize uint32
-	HistoryList *FlstBaseNode
-	FsegEntry   *FsegEntry
-}
+import (
+	"encoding/json"
+	"innodb_inspector/pkg/innodb/page"
+)
 
 type SysRsegHeaderPage struct {
 	*BasePage
 }
 
-func (t *SysRsegHeaderPage) RsegHeader() *RsegHeader {
+func (t *SysRsegHeaderPage) RsegHeader() *page.RsegHeader {
 	c := t.CursorAtBodyStart()
-	return &RsegHeader{
+	return &page.RsegHeader{
 		MaxSize:     c.Uint32(),
 		HistorySize: c.Uint32(),
 		HistoryList: c.FlstBaseNode(),
-		FsegEntry: &FsegEntry{
+		FsegEntry: &page.FsegEntry{
 			FsegHdrSpace:  c.Uint32(),
 			FsegHdrPageNo: c.Uint32(),
 			FsegHdrOffset: c.Uint16(),
@@ -29,9 +25,9 @@ func (t *SysRsegHeaderPage) RsegHeader() *RsegHeader {
 
 func (t *SysRsegHeaderPage) String() string {
 	type Page struct {
-		FILHeader  *FILHeader
-		RsegHeader *RsegHeader
-		FILTrailer *FILTrailer
+		FILHeader  *page.FILHeader
+		RsegHeader *page.RsegHeader
+		FILTrailer *page.FILTrailer
 	}
 
 	b, _ := json.MarshalIndent(&Page{

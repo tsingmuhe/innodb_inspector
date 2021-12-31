@@ -3,35 +3,39 @@ package innodb
 import (
 	"encoding/binary"
 	"errors"
-	page2 "innodb_inspector/pkg/innodb/page"
+	"innodb_inspector/pkg/innodb/page"
 	"os"
 )
 
-func ParsePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) page2.Page {
-	basePage := page2.NewBasePage(fspHeaderSpaceId, pageNo, pageBits)
+func ParsePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) Page {
+	basePage := NewBasePage(fspHeaderSpaceId, pageNo, pageBits)
 
 	pageType := basePage.Type()
 	switch pageType {
-	case page2.FilPageTypeFspHdr:
-		return &page2.FspHdrXdesPage{
+	case page.FilPageTypeFspHdr:
+		return &FspHdrPage{
 			BasePage: basePage,
 		}
-	case page2.FilPageInode:
-		return &page2.InodePage{
+	case page.FilPageTypeXdes:
+		return &XdesPage{
 			BasePage: basePage,
 		}
-	case page2.FilPageTypeSys:
+	case page.FilPageInode:
+		return &InodePage{
+			BasePage: basePage,
+		}
+	case page.FilPageTypeSys:
 		switch pageNo {
-		case page2.InsertBufferHeaderPageNo:
-			return &page2.IBufHeaderPage{
+		case page.InsertBufferHeaderPageNo:
+			return &IBufHeaderPage{
 				BasePage: basePage,
 			}
-		case page2.FirstRollbackSegmentPageNo:
-			return &page2.SysRsegHeaderPage{
+		case page.FirstRollbackSegmentPageNo:
+			return &SysRsegHeaderPage{
 				BasePage: basePage,
 			}
-		case page2.DataDictionaryHeaderPageNo:
-			return &page2.DictionaryHeaderPage{
+		case page.DataDictionaryHeaderPageNo:
+			return &DictionaryHeaderPage{
 				BasePage: basePage,
 			}
 		default:
@@ -66,7 +70,7 @@ func PageDetail(filePath string, targetPageNo, pageSize uint32) (string, error) 
 
 type PageDesc struct {
 	PageNo    uint32
-	PageType  page2.Type
+	PageType  page.Type
 	SpaceId   uint32
 	PageNotes string
 }
@@ -108,26 +112,26 @@ func OverView(filePath string, pageSize uint32) ([]*PageDesc, error) {
 	return pds, nil
 }
 
-func pageNotes(pg page2.Page) string {
+func pageNotes(pg Page) string {
 	pageNo := pg.PageNo()
 
 	if pg.IsSysTablespace() {
 		switch pageNo {
 		case 0:
 			return "system tablespace"
-		case page2.InsertBufferHeaderPageNo:
+		case page.InsertBufferHeaderPageNo:
 			return "insert buffer header"
-		case page2.InsertBufferRootPageNo:
+		case page.InsertBufferRootPageNo:
 			return "insert buffer root page"
-		case page2.TransactionSystemHeaderPageNo:
+		case page.TransactionSystemHeaderPageNo:
 			return "transaction system header"
-		case page2.FirstRollbackSegmentPageNo:
+		case page.FirstRollbackSegmentPageNo:
 			return "first rollback segment"
-		case page2.DataDictionaryHeaderPageNo:
+		case page.DataDictionaryHeaderPageNo:
 			return "data dictionary header"
 		}
 
-		if pageNo >= page2.DoubleWriteBufferPageNo1 && pageNo < page2.DoubleWriteBufferPageNo2 {
+		if pageNo >= page.DoubleWriteBufferPageNo1 && pageNo < page.DoubleWriteBufferPageNo2 {
 			return "double write buffer block"
 		}
 
@@ -135,9 +139,9 @@ func pageNotes(pg page2.Page) string {
 	}
 
 	switch pageNo {
-	case page2.RootPageOfFirstIndexPageNo:
+	case page.RootPageOfFirstIndexPageNo:
 		return "root page of first index"
-	case page2.RootPageOfSecondIndexPageNo:
+	case page.RootPageOfSecondIndexPageNo:
 		return "root page of second index"
 	}
 
