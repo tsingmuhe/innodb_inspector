@@ -43,7 +43,3 @@ type FILTrailer struct {
 	OldStyleChecksum uint32
 	Low32BitsOfLSN   uint32
 }
-
-func IsUndefinedPageNo(pageNo uint32) bool {
-	return pageNo >= UndefinedPageNo
-}

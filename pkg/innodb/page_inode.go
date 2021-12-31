@@ -25,7 +25,7 @@ func (t *InodePage) InodeEntry() []*page.InodeEntry {
 
 		for i := 0; i < 32; i++ {
 			pageNo := c.Uint32()
-			if !page.IsUndefinedPageNo(pageNo) {
+			if !IsUndefinedPageNo(pageNo) {
 				inodeEntry.FsegFragArr = append(inodeEntry.FsegFragArr, pageNo)
 			}
 		}

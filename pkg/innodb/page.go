@@ -98,3 +98,7 @@ func (f *BasePage) FILTrailer() *page.FILTrailer {
 		Low32BitsOfLSN:   c.Uint32(),
 	}
 }
+
+func IsUndefinedPageNo(pageNo uint32) bool {
+	return pageNo >= page.UndefinedPageNo
+}
