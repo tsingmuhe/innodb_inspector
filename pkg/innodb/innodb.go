@@ -41,6 +41,10 @@ func ParsePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) Page {
 		default:
 			return basePage
 		}
+	case page.FilPageIndex:
+		return &IndexPage{
+			BasePage: basePage,
+		}
 	case page.FilPageTypeBlob:
 		return &BlobPage{
 			BasePage: basePage,
