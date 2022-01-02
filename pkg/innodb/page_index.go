@@ -44,21 +44,41 @@ func (t *IndexPage) FSegHeader() *page.FSegHeader {
 }
 
 func (t *IndexPage) Infimum() *page.Infimum {
-	c := t.CursorAt(38 + 36 + 20)
+	if t.IsCompact() {
+		c := t.CursorAt(94)
+		return &page.Infimum{
+			InfoFlags: c.Bytes(5),
+			Infimum:   string(c.Bytes(8)),
+		}
+	}
+
+	c := t.CursorAt(94)
 	return &page.Infimum{
-		InfoFlags:        c.Bytes(3),
-		NextRecordOffset: c.Uint16(),
-		Infimum:          string(c.Bytes(8)),
+		InfoFlags: c.Bytes(7),
+		Infimum:   string(c.Bytes(8)),
 	}
 }
 
 func (t *IndexPage) Supremum() *page.Supremum {
-	c := t.CursorAt(107)
-	return &page.Supremum{
-		InfoFlags:        c.Bytes(3),
-		NextRecordOffset: c.Uint16(),
-		Supremum:         string(c.Bytes(8)),
+	if t.IsCompact() {
+		c := t.CursorAt(107)
+		return &page.Supremum{
+			InfoFlags: c.Bytes(5),
+			Supremum:  string(c.Bytes(8)),
+		}
 	}
+	
+	c := t.CursorAt(109)
+	return &page.Supremum{
+		InfoFlags: c.Bytes(7),
+		Supremum:  string(c.Bytes(8)),
+	}
+}
+
+func (t *IndexPage) IsCompact() bool {
+	c := t.CursorAt(42)
+	flag := c.Bytes(1)[0]
+	return (flag >> 7) == 1
 }
 
 func (t *IndexPage) String() string {

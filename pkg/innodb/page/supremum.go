@@ -1,7 +1,6 @@
 package page
 
 type Supremum struct {
-	InfoFlags        Bits
-	NextRecordOffset uint16
-	Supremum         string
+	InfoFlags Bits //redundant 7byte compact 5byte
+	Supremum  string
 }

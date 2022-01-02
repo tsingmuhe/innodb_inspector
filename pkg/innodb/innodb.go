@@ -2,8 +2,8 @@ package innodb
 
 import (
 	"encoding/binary"
-	"errors"
 	"innodb_inspector/pkg/innodb/page"
+	"io"
 	"os"
 )
 
@@ -55,25 +55,20 @@ func ParsePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) Page {
 }
 
 func PageDetail(filePath string, targetPageNo, pageSize uint32) (string, error) {
-	dbFile, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-	defer dbFile.Close()
+	fspHeaderSpaceId := resolveFspHeaderSpaceId(filePath, pageSize)
 
-	fspHeaderSpaceId, err := resolveFspHeaderSpaceId(dbFile)
-	if err != nil {
-		return "", err
-	}
+	var result string
 
-	buf := make([]byte, pageSize)
-	n, _ := dbFile.ReadAt(buf, int64(targetPageNo*pageSize))
-	if n <= 0 {
-		return "", errors.New("bad file")
-	}
+	forEachPage(filePath, pageSize, func(pageNo uint32, bytes []byte) (bool, error) {
+		if pageNo == targetPageNo {
+			pg := ParsePage(fspHeaderSpaceId, targetPageNo, bytes)
+			result = pg.String()
+			return true, nil
+		}
+		return false, nil
+	})
 
-	pg := ParsePage(fspHeaderSpaceId, targetPageNo, buf)
-	return pg.String(), nil
+	return result, nil
 }
 
 type PageDesc struct {
@@ -84,38 +79,20 @@ type PageDesc struct {
 }
 
 func OverView(filePath string, pageSize uint32) ([]*PageDesc, error) {
-	dbFile, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer dbFile.Close()
+	fspHeaderSpaceId := resolveFspHeaderSpaceId(filePath, pageSize)
 
-	fspHeaderSpaceId, err := resolveFspHeaderSpaceId(dbFile)
-	if err != nil {
-		return nil, err
-	}
-
-	dbFileStat, _ := dbFile.Stat()
-	dbFileSize := dbFileStat.Size()
-	pageCount := uint32(dbFileSize) / pageSize
-
-	buf := make([]byte, pageSize)
 	var pds []*PageDesc
 
-	for pageNo := uint32(0); pageNo < pageCount; pageNo++ {
-		n, _ := dbFile.ReadAt(buf, int64(pageNo*pageSize))
-		if n <= 0 {
-			return nil, errors.New("bad file")
-		}
-
-		pg := ParsePage(fspHeaderSpaceId, pageNo, buf)
+	forEachPage(filePath, pageSize, func(pageNo uint32, bytes []byte) (bool, error) {
+		pg := ParsePage(fspHeaderSpaceId, pageNo, bytes)
 		pds = append(pds, &PageDesc{
 			PageNo:    pg.PageNo(),
 			PageType:  pg.Type(),
 			SpaceId:   pg.SpaceId(),
 			PageNotes: pageNotes(pg),
 		})
-	}
+		return false, nil
+	})
 
 	return pds, nil
 }
@@ -156,11 +133,46 @@ func pageNotes(pg Page) string {
 	return ""
 }
 
-func resolveFspHeaderSpaceId(dbFile *os.File) (uint32, error) {
-	buf := make([]byte, 4)
-	_, err := dbFile.ReadAt(buf, 34)
+func resolveFspHeaderSpaceId(filePath string, pageSize uint32) uint32 {
+	var fspHeaderSpaceId uint32
+
+	forEachPage(filePath, pageSize, func(pageNo uint32, bytes []byte) (bool, error) {
+		fspHeaderSpaceId = binary.BigEndian.Uint32(bytes[34:38])
+		pg := NewBasePage(0, pageNo, bytes)
+		fspHeaderSpaceId = pg.SpaceId()
+		return true, nil
+	})
+
+	return fspHeaderSpaceId
+}
+
+func forEachPage(filePath string, pageSize uint32, handle func(uint32, []byte) (bool, error)) error {
+	f, err := os.Open(filePath)
 	if err != nil {
-		return 0, err
+		return err
 	}
-	return binary.BigEndian.Uint32(buf), nil
+	defer f.Close()
+
+	buf := make([]byte, pageSize)
+	var pageNo uint32
+
+	for {
+		switch n, err := f.Read(buf); true {
+		case n > 0:
+			breakLoop, err := handle(pageNo, buf)
+			if err != nil {
+				return err
+			}
+
+			if breakLoop {
+				return nil
+			}
+		case n == 0 && err == io.EOF: // EOF
+			return nil
+		case err != nil:
+			return err
+		}
+
+		pageNo++
+	}
 }
