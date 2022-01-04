@@ -1,19 +1,29 @@
 package page
 
-//FlstBaseNode 16
+const (
+	FlstBaseNodeSize = 4 + FlstAddressSize + FlstAddressSize
+)
+
 type FlstBaseNode struct {
-	Len   uint32   //4 存储链表的长度
-	First *Address //6 指向链表的第一个节点
-	Last  *Address //6 指向链表的最后一个节点
+	Len   uint32       //4 存储链表的长度
+	First *FlstAddress //6 指向链表的第一个节点
+	Last  *FlstAddress //6 指向链表的最后一个节点
 }
 
-//FlstNode 12
+const (
+	FlstNodeSize = FlstAddressSize + FlstAddressSize
+)
+
 type FlstNode struct {
-	Pre  *Address //6 指向当前节点的前一个节点
-	Next *Address //6 指向当前节点的下一个节点
+	Pre  *FlstAddress //6 指向当前节点的前一个节点
+	Next *FlstAddress //6 指向当前节点的下一个节点
 }
 
-type Address struct {
+const (
+	FlstAddressSize = 4 + 2
+)
+
+type FlstAddress struct {
 	PageNo uint32 //4 Page No
 	Offset uint16 //2 Page内的偏移量
 }

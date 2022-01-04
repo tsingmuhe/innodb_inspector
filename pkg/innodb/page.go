@@ -92,7 +92,7 @@ func (f *BasePage) FilHeader() *page.FILHeader {
 }
 
 func (f *BasePage) FILTrailer() *page.FILTrailer {
-	c := f.PageCursorAt(page.FilTrailerPosition)
+	c := f.PageCursorAt(uint32(len(f.pageBits) - page.FilTrailerSize))
 	return &page.FILTrailer{
 		OldStyleChecksum: c.Uint32(),
 		Low32BitsOfLSN:   c.Uint32(),

@@ -78,11 +78,11 @@ func (t *PageCursor) Int64() int64 {
 func (t *PageCursor) FlstBaseNode() *page.FlstBaseNode {
 	return &page.FlstBaseNode{
 		Len: t.Uint32(),
-		First: &page.Address{
+		First: &page.FlstAddress{
 			PageNo: t.Uint32(),
 			Offset: t.Uint16(),
 		},
-		Last: &page.Address{
+		Last: &page.FlstAddress{
 			PageNo: t.Uint32(),
 			Offset: t.Uint16(),
 		},
@@ -91,11 +91,11 @@ func (t *PageCursor) FlstBaseNode() *page.FlstBaseNode {
 
 func (t *PageCursor) FlstNode() *page.FlstNode {
 	return &page.FlstNode{
-		Pre: &page.Address{
+		Pre: &page.FlstAddress{
 			PageNo: t.Uint32(),
 			Offset: t.Uint16(),
 		},
-		Next: &page.Address{
+		Next: &page.FlstAddress{
 			PageNo: t.Uint32(),
 			Offset: t.Uint16(),
 		},

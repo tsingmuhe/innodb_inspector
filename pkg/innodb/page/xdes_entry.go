@@ -28,6 +28,11 @@ func (t XDESState) MarshalText() ([]byte, error) {
 	return []byte(t.String()), nil
 }
 
+const (
+	XDESEntrySize         = 8 + 12 + 4 + 16
+	XDESEntryCountPerPage = 256
+)
+
 type XDESEntry struct {
 	SegmentId uint64    //8 如果该Extent归属某个segment的话，则记录其ID
 	FlstNode  *FlstNode //12 维持Extent链表的双向指针节点

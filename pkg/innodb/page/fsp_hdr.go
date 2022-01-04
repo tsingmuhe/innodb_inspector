@@ -1,5 +1,10 @@
 package page
 
+const (
+	FSPHeaderPosition = FilHeaderSize
+	FSPHeaderSize     = 4 + 4 + 4 + 4 + 4 + 4 + 16 + 16 + 16 + 8 + 16 + 16
+)
+
 type FSPHeader struct {
 	SpaceId       uint32        //4 该文件对应的space id
 	Unused        uint32        //4 如其名，保留字节，当前未使用

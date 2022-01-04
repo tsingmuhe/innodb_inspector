@@ -9,8 +9,17 @@ type InodePage struct {
 	*BasePage
 }
 
+func (t *InodePage) InodeList() *page.FlstNode {
+	c := t.PageCursorAtBodyStart()
+	inodeList := c.FlstNode()
+	if IsUndefinedPageNo(inodeList.Pre.PageNo) {
+		return nil
+	}
+	return inodeList
+}
+
 func (t *InodePage) InodeEntry() []*page.InodeEntry {
-	c := t.PageCursorAt(50)
+	c := t.PageCursorAt(page.FilHeaderSize + page.FlstNodeSize)
 
 	var inodeEntries []*page.InodeEntry
 	for i := 0; i < 85; i++ {
@@ -41,12 +50,14 @@ func (t *InodePage) InodeEntry() []*page.InodeEntry {
 func (t *InodePage) String() string {
 	type Page struct {
 		FILHeader    *page.FILHeader
+		InodeList    *page.FlstNode
 		InodeEntries []*page.InodeEntry
 		FILTrailer   *page.FILTrailer
 	}
 
 	b, _ := json.MarshalIndent(&Page{
 		FILHeader:    t.FilHeader(),
+		InodeList:    t.InodeList(),
 		InodeEntries: t.InodeEntry(),
 		FILTrailer:   t.FILTrailer(),
 	}, "", "  ")

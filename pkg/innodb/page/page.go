@@ -7,14 +7,6 @@ const (
 )
 
 const (
-	FilHeaderPosition  = 0
-	FilTrailerPosition = 0
-
-	FilHeaderSize  = 4 + 4 + 4 + 4 + 8 + 2 + 8 + 4
-	FilTrailerSize = 4 + 4
-)
-
-const (
 	InsertBufferHeaderPageNo      = 3
 	InsertBufferRootPageNo        = 4
 	TransactionSystemHeaderPageNo = 5
@@ -28,6 +20,11 @@ const (
 	RootPageOfSecondIndexPageNo = 4
 )
 
+const (
+	FilHeaderPosition = 0
+	FilHeaderSize     = 4 + 4 + 4 + 4 + 8 + 2 + 8 + 4
+)
+
 type FILHeader struct {
 	FilPageSpaceOrChksum      uint32
 	FilPageOffset             uint32
@@ -38,6 +35,10 @@ type FILHeader struct {
 	FilPageFileFlushLSN       uint64
 	FilPageArchLogNoOrSpaceId uint32
 }
+
+const (
+	FilTrailerSize = 4 + 4
+)
 
 type FILTrailer struct {
 	OldStyleChecksum uint32

@@ -5,6 +5,11 @@ type Infimum struct {
 	Infimum   string
 }
 
+const (
+	CompactInfimumPosition = FilHeaderSize + IndexHeaderSize + FSegHeaderSize
+	CompactInfimumSize     = 3 + 2 + 8
+)
+
 type CompactInfimum struct {
 	OffSet uint32 //99
 
