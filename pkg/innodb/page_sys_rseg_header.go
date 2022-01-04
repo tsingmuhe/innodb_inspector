@@ -10,7 +10,7 @@ type SysRsegHeaderPage struct {
 }
 
 func (t *SysRsegHeaderPage) RsegHeader() *page.RsegHeader {
-	c := t.CursorAtBodyStart()
+	c := t.PageCursorAtBodyStart()
 	return &page.RsegHeader{
 		MaxSize:     c.Uint32(),
 		HistorySize: c.Uint32(),

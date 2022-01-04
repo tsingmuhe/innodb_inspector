@@ -13,9 +13,9 @@ type Page interface {
 	IsSysTablespace() bool
 	IsDoubleWriteBufferBlock() bool
 
-	Cursor() *Cursor
-	CursorAt(position uint32) *Cursor
-	CursorAtBodyStart() *Cursor
+	PageCursor() *PageCursor
+	PageCursorAt(position uint32) *PageCursor
+	PageCursorAtBodyStart() *PageCursor
 
 	FilHeader() *page.FILHeader
 	FILTrailer() *page.FILTrailer
@@ -40,7 +40,7 @@ func (f *BasePage) FSPHeaderSpaceId() uint32 {
 }
 
 func (f *BasePage) SpaceId() uint32 {
-	return f.CursorAt(34).Uint32()
+	return f.PageCursorAt(34).Uint32()
 }
 
 func (f *BasePage) PageNo() uint32 {
@@ -48,7 +48,7 @@ func (f *BasePage) PageNo() uint32 {
 }
 
 func (f *BasePage) Type() page.Type {
-	return page.Type(f.CursorAt(24).Uint16())
+	return page.Type(f.PageCursorAt(24).Uint16())
 }
 
 func (f *BasePage) String() string {
@@ -65,20 +65,20 @@ func (f *BasePage) IsDoubleWriteBufferBlock() bool {
 		f.pageNo < page.DoubleWriteBufferPageNo2
 }
 
-func (f *BasePage) Cursor() *Cursor {
-	return NewCursor(f.pageBits, 0)
+func (f *BasePage) PageCursor() *PageCursor {
+	return NewPageCursor(f.pageBits)
 }
 
-func (f *BasePage) CursorAt(position uint32) *Cursor {
-	return NewCursor(f.pageBits, position)
+func (f *BasePage) PageCursorAt(position uint32) *PageCursor {
+	return NewPageCursor(f.pageBits).SetReaderIndex(position)
 }
 
-func (f *BasePage) CursorAtBodyStart() *Cursor {
-	return NewCursor(f.pageBits, page.FilHeaderSize)
+func (f *BasePage) PageCursorAtBodyStart() *PageCursor {
+	return NewPageCursor(f.pageBits).SetReaderIndex(page.FilHeaderSize)
 }
 
 func (f *BasePage) FilHeader() *page.FILHeader {
-	c := f.Cursor()
+	c := f.PageCursor()
 	return &page.FILHeader{
 		FilPageSpaceOrChksum:      c.Uint32(),
 		FilPageOffset:             c.Uint32(),
@@ -92,7 +92,7 @@ func (f *BasePage) FilHeader() *page.FILHeader {
 }
 
 func (f *BasePage) FILTrailer() *page.FILTrailer {
-	c := f.CursorAt(page.FilTrailerPosition)
+	c := f.PageCursorAt(page.FilTrailerPosition)
 	return &page.FILTrailer{
 		OldStyleChecksum: c.Uint32(),
 		Low32BitsOfLSN:   c.Uint32(),

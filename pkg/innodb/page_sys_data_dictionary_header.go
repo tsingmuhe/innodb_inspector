@@ -10,7 +10,7 @@ type DictionaryHeaderPage struct {
 }
 
 func (t *DictionaryHeaderPage) DictionaryHeader() *page.DictionaryHeader {
-	c := t.CursorAtBodyStart()
+	c := t.PageCursorAtBodyStart()
 	dictionaryHeader := &page.DictionaryHeader{
 		DictHdrRowId:      c.Uint64(),
 		DictHdrTableId:    c.Uint64(),
@@ -24,7 +24,7 @@ func (t *DictionaryHeaderPage) DictionaryHeader() *page.DictionaryHeader {
 		DictHdrFields:     c.Uint32(),
 	}
 
-	c.Skip(4)
+	c.SkipBytes(4)
 
 	dictionaryHeader.FsegEntry = &page.FsegEntry{
 		FsegHdrSpace:  c.Uint32(),

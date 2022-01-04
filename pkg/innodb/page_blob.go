@@ -7,7 +7,7 @@ type BlobPage struct {
 }
 
 func (t *BlobPage) BlobHeader() *page.BlobHeader {
-	c := t.CursorAtBodyStart()
+	c := t.PageCursorAtBodyStart()
 	return &page.BlobHeader{
 		Length:   c.Uint32(),
 		NextPage: c.Uint32(),

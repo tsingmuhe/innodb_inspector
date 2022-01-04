@@ -10,7 +10,7 @@ type InodePage struct {
 }
 
 func (t *InodePage) InodeEntry() []*page.InodeEntry {
-	c := t.CursorAt(50)
+	c := t.PageCursorAt(50)
 
 	var inodeEntries []*page.InodeEntry
 	for i := 0; i < 85; i++ {

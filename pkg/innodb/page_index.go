@@ -2,6 +2,7 @@ package innodb
 
 import (
 	"encoding/json"
+	"fmt"
 	"innodb_inspector/pkg/innodb/page"
 )
 
@@ -10,7 +11,7 @@ type IndexPage struct {
 }
 
 func (t *IndexPage) IndexHeader() *page.IndexHeader {
-	c := t.CursorAtBodyStart()
+	c := t.PageCursorAtBodyStart()
 	return &page.IndexHeader{
 		NDirSlots:  c.Uint16(),
 		HeapTop:    c.Uint16(),
@@ -28,7 +29,7 @@ func (t *IndexPage) IndexHeader() *page.IndexHeader {
 }
 
 func (t *IndexPage) FSegHeader() *page.FSegHeader {
-	c := t.CursorAt(74)
+	c := t.PageCursorAt(74)
 	return &page.FSegHeader{
 		Leaf: &page.FsegEntry{
 			FsegHdrSpace:  c.Uint32(),
@@ -43,51 +44,89 @@ func (t *IndexPage) FSegHeader() *page.FSegHeader {
 	}
 }
 
-func (t *IndexPage) Infimum() *page.Infimum {
-	if t.IsCompact() {
-		c := t.CursorAt(94)
-		return &page.Infimum{
-			InfoFlags: c.Bytes(5),
-			Infimum:   string(c.Bytes(8)),
-		}
-	}
-
-	c := t.CursorAt(94)
-	return &page.Infimum{
-		InfoFlags: c.Bytes(7),
-		Infimum:   string(c.Bytes(8)),
-	}
-}
-
-func (t *IndexPage) Supremum() *page.Supremum {
-	if t.IsCompact() {
-		c := t.CursorAt(107)
-		return &page.Supremum{
-			InfoFlags: c.Bytes(5),
-			Supremum:  string(c.Bytes(8)),
-		}
-	}
-	
-	c := t.CursorAt(109)
-	return &page.Supremum{
-		InfoFlags: c.Bytes(7),
-		Supremum:  string(c.Bytes(8)),
-	}
-}
-
 func (t *IndexPage) IsCompact() bool {
-	c := t.CursorAt(42)
-	flag := c.Bytes(1)[0]
+	c := t.PageCursorAt(42)
+	flag := c.Byte()
 	return (flag >> 7) == 1
 }
 
+func (t *IndexPage) Infimum() *page.CompactInfimum {
+	if t.IsCompact() {
+		c := t.PageCursorAt(94)
+		bs := c.Bytes(3)
+		recordType := bs[2]
+		return &page.CompactInfimum{
+			OffSet:           99,
+			InfoFlags:        bs,
+			RecordType:       uint(recordType & byte(7)),
+			NextRecordOffset: c.Int16(),
+			Infimum:          string(c.Bytes(8)),
+		}
+	}
+
+	return nil
+}
+
+func (t *IndexPage) Supremum() *page.CompactSupremum {
+	if t.IsCompact() {
+		c := t.PageCursorAt(107)
+		bs := c.Bytes(3)
+		recordType := bs[2]
+		return &page.CompactSupremum{
+			OffSet:           112,
+			InfoFlags:        bs,
+			RecordType:       uint(recordType & byte(7)),
+			NextRecordOffset: c.Int16(),
+			Supremum:         string(c.Bytes(8)),
+		}
+	}
+	return nil
+}
+
+func (t *IndexPage) Records() []uint32 {
+	infimum := t.Infimum()
+	supremum := t.Supremum()
+
+	var result []uint32
+	result = append(result, infimum.OffSet)
+	result = append(result, supremum.OffSet)
+
+	nr := infimum.NextRecord()
+	if nr == supremum.OffSet {
+		return result
+	}
+
+	for {
+		result = append(result, nr)
+		ir := t.IndexRecord(nr)
+		if ir.NextRecord() == supremum.OffSet {
+			break
+		}
+		nr = ir.NextRecord()
+	}
+
+	return result
+}
+
+func (t *IndexPage) IndexRecord(offset uint32) *page.IndexRecord {
+	c := t.PageCursorAt(offset - 3)
+	recordType := c.Byte()
+	return &page.IndexRecord{
+		OffSet:           offset,
+		RecordType:       uint(recordType & byte(7)),
+		NextRecordOffset: c.Int16(),
+	}
+}
+
 func (t *IndexPage) String() string {
+	fmt.Println(t.Records())
+
 	type Page struct {
 		FILHeader   *page.FILHeader
 		IndexHeader *page.IndexHeader
 		FSegHeader  *page.FSegHeader
-		Infimum     *page.Infimum
-		Supremum    *page.Supremum
+		Infimum     *page.CompactInfimum
+		Supremum    *page.CompactSupremum
 		FILTrailer  *page.FILTrailer
 	}
 

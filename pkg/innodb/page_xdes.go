@@ -10,7 +10,7 @@ type XdesPage struct {
 }
 
 func (f *XdesPage) XDESEntry() []*page.XDESEntry {
-	c := f.CursorAt(150)
+	c := f.PageCursorAt(150)
 
 	var xdesEntries []*page.XDESEntry
 

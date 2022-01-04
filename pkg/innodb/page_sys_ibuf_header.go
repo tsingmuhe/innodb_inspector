@@ -10,7 +10,7 @@ type IBufHeaderPage struct {
 }
 
 func (t *IBufHeaderPage) FsegEntry() *page.FsegEntry {
-	c := t.CursorAtBodyStart()
+	c := t.PageCursorAtBodyStart()
 	return &page.FsegEntry{
 		FsegHdrSpace:  c.Uint32(),
 		FsegHdrPageNo: c.Uint32(),

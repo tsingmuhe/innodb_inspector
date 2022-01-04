@@ -119,15 +119,20 @@ func pageNotes(pg Page) string {
 		if pageNo >= page.DoubleWriteBufferPageNo1 && pageNo < page.DoubleWriteBufferPageNo2 {
 			return "double write buffer block"
 		}
-
-		return ""
+	} else {
+		switch pageNo {
+		case page.RootPageOfFirstIndexPageNo:
+			return "root page of first index"
+		case page.RootPageOfSecondIndexPageNo:
+			return "root page of second index"
+		}
 	}
 
-	switch pageNo {
-	case page.RootPageOfFirstIndexPageNo:
-		return "root page of first index"
-	case page.RootPageOfSecondIndexPageNo:
-		return "root page of second index"
+	if val, ok := pg.(*IndexPage); ok {
+		if val.IsCompact() {
+			return "compact format"
+		}
+		return "redundant format"
 	}
 
 	return ""

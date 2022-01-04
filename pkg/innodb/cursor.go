@@ -5,42 +5,77 @@ import (
 	"innodb_inspector/pkg/innodb/page"
 )
 
-type Cursor struct {
-	data     []byte
-	position uint32
+type PageCursor struct {
+	data        []byte
+	readerIndex uint32
 }
 
-func NewCursor(data []byte, position uint32) *Cursor {
-	return &Cursor{
-		data:     data,
-		position: position,
+func NewPageCursor(data []byte) *PageCursor {
+	return &PageCursor{
+		data:        data,
+		readerIndex: 0,
 	}
 }
 
-func (t *Cursor) Skip(delta uint32) *Cursor {
-	t.position = t.position + delta
+func (t *PageCursor) ReaderIndex() uint32 {
+	return t.readerIndex
+}
+
+func (t *PageCursor) SetReaderIndex(readerIndex uint32) *PageCursor {
+	t.readerIndex = readerIndex
 	return t
 }
 
-func (t *Cursor) Uint16() uint16 {
-	return binary.BigEndian.Uint16(t.Bytes(2))
+func (t *PageCursor) SkipBytes(length uint32) *PageCursor {
+	t.readerIndex = t.readerIndex + length
+	return t
 }
 
-func (t *Cursor) Uint32() uint32 {
-	return binary.BigEndian.Uint32(t.Bytes(4))
-}
-
-func (t *Cursor) Uint64() uint64 {
-	return binary.BigEndian.Uint64(t.Bytes(8))
-}
-
-func (t *Cursor) Bytes(delta uint32) []byte {
-	result := t.data[t.position : t.position+delta]
-	t.position = t.position + delta
+func (t *PageCursor) Byte() byte {
+	result := t.data[t.readerIndex]
+	t.readerIndex = t.readerIndex + 1
 	return result
 }
 
-func (t *Cursor) FlstBaseNode() *page.FlstBaseNode {
+func (t *PageCursor) Bytes(length uint32) []byte {
+	result := t.data[t.readerIndex : t.readerIndex+length]
+	t.readerIndex = t.readerIndex + length
+	return result
+}
+
+func (t *PageCursor) Uint8() uint8 {
+	return uint8(t.Byte())
+}
+
+func (t *PageCursor) Int8() int8 {
+	return int8(t.Byte())
+}
+
+func (t *PageCursor) Uint16() uint16 {
+	return binary.BigEndian.Uint16(t.Bytes(2))
+}
+
+func (t *PageCursor) Int16() int16 {
+	return int16(t.Uint16())
+}
+
+func (t *PageCursor) Uint32() uint32 {
+	return binary.BigEndian.Uint32(t.Bytes(4))
+}
+
+func (t *PageCursor) Int32() int32 {
+	return int32(t.Uint32())
+}
+
+func (t *PageCursor) Uint64() uint64 {
+	return binary.BigEndian.Uint64(t.Bytes(8))
+}
+
+func (t *PageCursor) Int64() int64 {
+	return int64(t.Uint64())
+}
+
+func (t *PageCursor) FlstBaseNode() *page.FlstBaseNode {
 	return &page.FlstBaseNode{
 		Len: t.Uint32(),
 		First: &page.Address{
@@ -54,7 +89,7 @@ func (t *Cursor) FlstBaseNode() *page.FlstBaseNode {
 	}
 }
 
-func (t *Cursor) FlstNode() *page.FlstNode {
+func (t *PageCursor) FlstNode() *page.FlstNode {
 	return &page.FlstNode{
 		Pre: &page.Address{
 			PageNo: t.Uint32(),

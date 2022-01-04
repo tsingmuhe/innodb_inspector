@@ -10,7 +10,7 @@ type FspHdrPage struct {
 }
 
 func (f *FspHdrPage) FSPHeader() *page.FSPHeader {
-	c := f.CursorAtBodyStart()
+	c := f.PageCursorAtBodyStart()
 	return &page.FSPHeader{
 		SpaceId:       c.Uint32(),
 		Unused:        c.Uint32(),
@@ -28,7 +28,7 @@ func (f *FspHdrPage) FSPHeader() *page.FSPHeader {
 }
 
 func (f *FspHdrPage) XDESEntry() []*page.XDESEntry {
-	c := f.CursorAt(150)
+	c := f.PageCursorAt(150)
 
 	var xdesEntries []*page.XDESEntry
 
