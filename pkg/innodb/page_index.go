@@ -50,8 +50,29 @@ func (t *IndexPage) CompactRecordInfos() []*page.CompactRecordInfo {
 	var compactRecordInfos []*page.CompactRecordInfo
 
 	for np != supremum.Position {
-		ri := page.NewCompactRecordInfo(np, t.pageBytes)
+		ri := page.NewCompactRecordInfo(np, t.pageBytes, false)
 		compactRecordInfos = append(compactRecordInfos, ri)
+		np = ri.NextPosition()
+	}
+
+	return compactRecordInfos
+}
+
+func (t *IndexPage) FreeCompactRecordInfos() []*page.CompactRecordInfo {
+	indexheader := t.IndexHeader()
+	np := uint32(indexheader.Free)
+	if np == 0 {
+		return nil
+	}
+
+	var compactRecordInfos []*page.CompactRecordInfo
+
+	for {
+		ri := page.NewCompactRecordInfo(np, t.pageBytes, true)
+		compactRecordInfos = append(compactRecordInfos, ri)
+		if ri.NextRecordOffset == 0 {
+			break
+		}
 		np = ri.NextPosition()
 	}
 
@@ -70,6 +91,11 @@ func (t *IndexPage) HexEditorTags() []*page.HexEditorTag {
 
 		compactRecordInfos := t.CompactRecordInfos()
 		for _, compactRecordInfo := range compactRecordInfos {
+			tags = append(tags, compactRecordInfo.HexEditorTag())
+		}
+
+		creeCompactRecordInfos := t.FreeCompactRecordInfos()
+		for _, compactRecordInfo := range creeCompactRecordInfos {
 			tags = append(tags, compactRecordInfo.HexEditorTag())
 		}
 	} else {

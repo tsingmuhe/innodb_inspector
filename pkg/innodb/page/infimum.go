@@ -72,7 +72,7 @@ func (t *CompactInfimum) HexEditorTag() *HexEditorTag {
 	return &HexEditorTag{
 		From:    t.buf.from,
 		To:      t.buf.to,
-		Color:   "lime",
+		Color:   "MediumOrchid",
 		Caption: "CompactInfimum",
 	}
 }
