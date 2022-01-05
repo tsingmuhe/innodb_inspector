@@ -9,6 +9,7 @@ import (
 
 var filePath = ""
 var pageNo int32 = -1
+var exportPath = ""
 
 var rootCmd = &cobra.Command{
 	Use:   "innodb_inspector -f <file> [-p <page>]",
@@ -19,7 +20,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		if pageNo >= 0 {
-			pageDetail(cmd, filePath, uint32(pageNo))
+			pageDetail(cmd, filePath, uint32(pageNo), exportPath)
 			return nil
 		}
 
@@ -30,6 +31,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.Flags().StringVarP(&filePath, "file", "f", "", "file path")
 	rootCmd.Flags().Int32VarP(&pageNo, "page", "p", -1, "page no")
+	rootCmd.Flags().StringVar(&exportPath, "export", "", "export page binary")
 }
 
 func Execute() {

@@ -10,6 +10,8 @@ type Page interface {
 
 	String() string
 
+	HexEditorTags() []*page.HexEditorTag
+
 	IsSysTablespace() bool
 	IsDoubleWriteBufferBlock() bool
 
@@ -55,6 +57,10 @@ func (f *BasePage) String() string {
 	return ""
 }
 
+func (f *BasePage) HexEditorTags() []*page.HexEditorTag {
+	return nil
+}
+
 func (f *BasePage) IsSysTablespace() bool {
 	return f.fspHeaderSpaceId == 0
 }
@@ -92,7 +98,7 @@ func (f *BasePage) FilHeader() *page.FILHeader {
 }
 
 func (f *BasePage) FILTrailer() *page.FILTrailer {
-	c := f.PageCursorAt(uint32(len(f.pageBits) - page.FilTrailerSize))
+	c := f.PageCursorAt(uint32(len(f.pageBits)) - page.FilTrailerSize)
 	return &page.FILTrailer{
 		OldStyleChecksum: c.Uint32(),
 		Low32BitsOfLSN:   c.Uint32(),

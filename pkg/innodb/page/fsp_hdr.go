@@ -19,3 +19,12 @@ type FSPHeader struct {
 	FullInodes    *FlstBaseNode //16 已被完全用满的Inode Page链表
 	FreeInodes    *FlstBaseNode //16 至少存在一个空闲Inode Entry的Inode Page被放到该链表上
 }
+
+func (t *FSPHeader) HexEditorTag() *HexEditorTag {
+	return &HexEditorTag{
+		From:    FSPHeaderPosition,
+		To:      FSPHeaderPosition + FSPHeaderSize - 1,
+		Color:   "orange",
+		Caption: "FSPHeader",
+	}
+}

@@ -2,6 +2,7 @@ package innodb
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"innodb_inspector/pkg/innodb/page"
 	"io"
 	"os"
@@ -54,7 +55,7 @@ func ParsePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) Page {
 	}
 }
 
-func PageDetail(filePath string, targetPageNo, pageSize uint32) (string, error) {
+func PageDetail(filePath string, targetPageNo, pageSize uint32, exportPath string) (string, error) {
 	fspHeaderSpaceId := resolveFspHeaderSpaceId(filePath, pageSize)
 
 	var result string
@@ -63,6 +64,14 @@ func PageDetail(filePath string, targetPageNo, pageSize uint32) (string, error) 
 		if pageNo == targetPageNo {
 			pg := ParsePage(fspHeaderSpaceId, targetPageNo, bytes)
 			result = pg.String()
+			if exportPath != "" {
+				file, _ := os.Create(exportPath)
+				file.Write(bytes)
+
+				tags, _ := json.Marshal(pg.HexEditorTags())
+				tagFile, _ := os.Create(exportPath + ".tags")
+				tagFile.WriteString(string(tags))
+			}
 			return true, nil
 		}
 		return false, nil

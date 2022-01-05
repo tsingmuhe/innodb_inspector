@@ -32,13 +32,12 @@ func (f *FspHdrPage) XDESEntry() []*page.XDESEntry {
 
 	var xdesEntries []*page.XDESEntry
 
-	for i := 0; i < 256; i++ {
-		xdesEntry := &page.XDESEntry{
-			SegmentId: c.Uint64(),
-			FlstNode:  c.FlstNode(),
-			State:     page.XDESState(c.Uint32()),
-			Bitmap:    c.Bytes(16),
-		}
+	for i := uint32(0); i < 256; i++ {
+		xdesEntry := page.NewXDESEntry(i)
+		xdesEntry.SegmentId = c.Uint64()
+		xdesEntry.FlstNode = c.FlstNode()
+		xdesEntry.State = page.XDESState(c.Uint32())
+		xdesEntry.Bitmap = c.Bytes(16)
 
 		if xdesEntry.State > 0 {
 			xdesEntries = append(xdesEntries, xdesEntry)
@@ -46,6 +45,20 @@ func (f *FspHdrPage) XDESEntry() []*page.XDESEntry {
 	}
 
 	return xdesEntries
+}
+
+func (f *FspHdrPage) HexEditorTags() []*page.HexEditorTag {
+	var result []*page.HexEditorTag
+	result = append(result, f.FilHeader().HexEditorTag())
+	result = append(result, f.FSPHeader().HexEditorTag())
+
+	xdesList := f.XDESEntry()
+	for _, xdes := range xdesList {
+		result = append(result, xdes.HexEditorTag())
+	}
+
+	result = append(result, f.FILTrailer().HexEditorTag(len(f.pageBits)))
+	return result
 }
 
 func (f *FspHdrPage) String() string {

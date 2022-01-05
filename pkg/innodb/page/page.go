@@ -36,11 +36,29 @@ type FILHeader struct {
 	FilPageArchLogNoOrSpaceId uint32
 }
 
+func (t *FILHeader) HexEditorTag() *HexEditorTag {
+	return &HexEditorTag{
+		From:    0,
+		To:      FilHeaderSize - 1,
+		Color:   "red",
+		Caption: "FILHeader",
+	}
+}
+
 const (
-	FilTrailerSize = 4 + 4
+	FilTrailerSize uint32 = 4 + 4
 )
 
 type FILTrailer struct {
 	OldStyleChecksum uint32
 	Low32BitsOfLSN   uint32
+}
+
+func (t *FILTrailer) HexEditorTag(pageSize int) *HexEditorTag {
+	return &HexEditorTag{
+		From:    uint32(pageSize) - FilTrailerSize,
+		To:      uint32(pageSize) - 1,
+		Color:   "red",
+		Caption: "FILTrailer",
+	}
 }

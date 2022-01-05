@@ -23,16 +23,15 @@ func (t *InodePage) InodeEntry() []*page.InodeEntry {
 
 	var inodeEntries []*page.InodeEntry
 	for i := 0; i < 85; i++ {
-		inodeEntry := &page.InodeEntry{
-			FsegId:           c.Uint64(),
-			FsegNotFullNUsed: c.Uint32(),
-			FsegFree:         c.FlstBaseNode(),
-			FsegNotFull:      c.FlstBaseNode(),
-			FsegFull:         c.FlstBaseNode(),
-			FsegMagicN:       c.Uint32(),
-		}
+		inodeEntry := page.NewInodeEntry(uint32(i))
+		inodeEntry.FsegId = c.Uint64()
+		inodeEntry.FsegNotFullNUsed = c.Uint32()
+		inodeEntry.FsegFree = c.FlstBaseNode()
+		inodeEntry.FsegNotFull = c.FlstBaseNode()
+		inodeEntry.FsegFull = c.FlstBaseNode()
+		inodeEntry.FsegMagicN = c.Uint32()
 
-		for i := 0; i < 32; i++ {
+		for j := 0; j < 32; j++ {
 			pageNo := c.Uint32()
 			if !IsUndefinedPageNo(pageNo) {
 				inodeEntry.FsegFragArr = append(inodeEntry.FsegFragArr, pageNo)
@@ -45,6 +44,19 @@ func (t *InodePage) InodeEntry() []*page.InodeEntry {
 	}
 
 	return inodeEntries
+}
+
+func (t *InodePage) HexEditorTags() []*page.HexEditorTag {
+	var result []*page.HexEditorTag
+	result = append(result, t.FilHeader().HexEditorTag())
+
+	inodeList := t.InodeEntry()
+	for _, inode := range inodeList {
+		result = append(result, inode.HexEditorTag())
+	}
+
+	result = append(result, t.FILTrailer().HexEditorTag(len(t.pageBits)))
+	return result
 }
 
 func (t *InodePage) String() string {

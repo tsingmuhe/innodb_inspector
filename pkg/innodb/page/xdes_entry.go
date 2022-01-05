@@ -34,8 +34,31 @@ const (
 )
 
 type XDESEntry struct {
-	SegmentId uint64    //8 如果该Extent归属某个segment的话，则记录其ID
-	FlstNode  *FlstNode //12 维持Extent链表的双向指针节点
-	State     XDESState //4 该Extent的状态信息，包括：XDES_FREE，XDES_FREE_FRAG，XDES_FULL_FRAG，XDES_FSEG
-	Bitmap    Bits      //16 总共16*8= 128个bit，用2个bit表示Extent中的一个page，一个bit表示该page是否是空闲的(XDES_FREE_BIT)，另一个保留位，尚未使用（XDES_CLEAN_BIT）
+	id uint32
+
+	SegmentId uint64
+	FlstNode  *FlstNode
+	State     XDESState
+	Bitmap    Bits
+}
+
+func NewXDESEntry(id uint32) *XDESEntry {
+	return &XDESEntry{
+		id: id,
+	}
+}
+
+func (t *XDESEntry) HexEditorTag() *HexEditorTag {
+	from := FSPHeaderPosition + FSPHeaderSize + t.id*XDESEntrySize
+	color := "yellow"
+	if t.id%2 == 1 {
+		color = "lime"
+	}
+
+	return &HexEditorTag{
+		From:    from,
+		To:      from + XDESEntrySize - 1,
+		Color:   color,
+		Caption: "XDESEntry",
+	}
 }
