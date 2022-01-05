@@ -2,7 +2,6 @@ package innodb
 
 import (
 	"encoding/json"
-	"fmt"
 	"innodb_inspector/pkg/innodb/page"
 )
 
@@ -11,131 +10,107 @@ type IndexPage struct {
 }
 
 func (t *IndexPage) IndexHeader() *page.IndexHeader {
-	c := t.PageCursorAtBodyStart()
-	return &page.IndexHeader{
-		NDirSlots:  c.Uint16(),
-		HeapTop:    c.Uint16(),
-		NHeap:      c.Uint16(),
-		Free:       c.Uint16(),
-		Garbage:    c.Uint16(),
-		LastInsert: c.Uint16(),
-		Direction:  c.Uint16(),
-		NDirection: c.Uint16(),
-		NRecs:      c.Uint16(),
-		MaxTrxID:   c.Uint64(),
-		Level:      c.Uint16(),
-		IndexId:    c.Uint64(),
-	}
+	return page.NewIndexHeader(t.pageBytes)
 }
 
 func (t *IndexPage) FSegHeader() *page.FSegHeader {
-	c := t.PageCursorAt(74)
-	return &page.FSegHeader{
-		Leaf: &page.FsegEntry{
-			FsegHdrSpace:  c.Uint32(),
-			FsegHdrPageNo: c.Uint32(),
-			FsegHdrOffset: c.Uint16(),
-		},
-		NoLeaf: &page.FsegEntry{
-			FsegHdrSpace:  c.Uint32(),
-			FsegHdrPageNo: c.Uint32(),
-			FsegHdrOffset: c.Uint16(),
-		},
-	}
+	return page.NewFSegHeader(t.pageBytes)
+}
+
+func (t *IndexPage) RedundantInfimum() *page.RedundantInfimum {
+	return page.NewRedundantInfimum(t.pageBytes)
+}
+
+func (t *IndexPage) CompactInfimum() *page.CompactInfimum {
+	return page.NewCompactInfimum(t.pageBytes)
+}
+
+func (t *IndexPage) RedundantSupremum() *page.RedundantSupremum {
+	return page.NewRedundantSupremum(t.pageBytes)
+}
+
+func (t *IndexPage) CompactSupremum() *page.CompactSupremum {
+	return page.NewCompactSupremum(t.pageBytes)
 }
 
 func (t *IndexPage) IsCompact() bool {
-	c := t.PageCursorAt(42)
-	flag := c.Byte()
-	return (flag >> 7) == 1
+	indexHeader := t.IndexHeader()
+	return indexHeader.IsCompact == 1
 }
 
-func (t *IndexPage) Infimum() *page.CompactInfimum {
+func (t *IndexPage) CompactRecordInfos() []*page.CompactRecordInfo {
+	infimum := t.CompactInfimum()
+	supremum := t.CompactSupremum()
+
+	np := infimum.NextPosition()
+	if np == supremum.Position {
+		return nil
+	}
+
+	var compactRecordInfos []*page.CompactRecordInfo
+
+	for np != supremum.Position {
+		ri := page.NewCompactRecordInfo(np, t.pageBytes)
+		compactRecordInfos = append(compactRecordInfos, ri)
+		np = ri.NextPosition()
+	}
+
+	return compactRecordInfos
+}
+
+func (t *IndexPage) HexEditorTags() []*page.HexEditorTag {
+	var tags []*page.HexEditorTag
+	tags = append(tags, t.FilHeader().HexEditorTag())
+	tags = append(tags, t.IndexHeader().HexEditorTag())
+	tags = append(tags, t.FSegHeader().HexEditorTag())
+
 	if t.IsCompact() {
-		c := t.PageCursorAt(94)
-		bs := c.Bytes(3)
-		recordType := bs[2]
-		return &page.CompactInfimum{
-			OffSet:           99,
-			InfoFlags:        bs,
-			RecordType:       uint(recordType & byte(7)),
-			NextRecordOffset: c.Int16(),
-			Infimum:          string(c.Bytes(8)),
+		tags = append(tags, t.CompactInfimum().HexEditorTag())
+		tags = append(tags, t.CompactSupremum().HexEditorTag())
+
+		compactRecordInfos := t.CompactRecordInfos()
+		for _, compactRecordInfo := range compactRecordInfos {
+			tags = append(tags, compactRecordInfo.HexEditorTag())
 		}
+	} else {
+		tags = append(tags, t.RedundantInfimum().HexEditorTag())
+		tags = append(tags, t.RedundantSupremum().HexEditorTag())
 	}
 
-	return nil
-}
-
-func (t *IndexPage) Supremum() *page.CompactSupremum {
-	if t.IsCompact() {
-		c := t.PageCursorAt(107)
-		bs := c.Bytes(3)
-		recordType := bs[2]
-		return &page.CompactSupremum{
-			OffSet:           112,
-			InfoFlags:        bs,
-			RecordType:       uint(recordType & byte(7)),
-			NextRecordOffset: c.Int16(),
-			Supremum:         string(c.Bytes(8)),
-		}
-	}
-	return nil
-}
-
-func (t *IndexPage) Records() []uint32 {
-	infimum := t.Infimum()
-	supremum := t.Supremum()
-
-	var result []uint32
-	result = append(result, infimum.OffSet)
-	result = append(result, supremum.OffSet)
-
-	nr := infimum.NextRecord()
-	if nr == supremum.OffSet {
-		return result
-	}
-
-	for {
-		result = append(result, nr)
-		ir := t.IndexRecord(nr)
-		if ir.NextRecord() == supremum.OffSet {
-			break
-		}
-		nr = ir.NextRecord()
-	}
-
-	return result
-}
-
-func (t *IndexPage) IndexRecord(offset uint32) *page.IndexRecord {
-	c := t.PageCursorAt(offset - 3)
-	recordType := c.Byte()
-	return &page.IndexRecord{
-		OffSet:           offset,
-		RecordType:       uint(recordType & byte(7)),
-		NextRecordOffset: c.Int16(),
-	}
+	tags = append(tags, t.FILTrailer().HexEditorTag())
+	return tags
 }
 
 func (t *IndexPage) String() string {
-	fmt.Println(t.Records())
-
 	type Page struct {
-		FILHeader   *page.FILHeader
-		IndexHeader *page.IndexHeader
-		FSegHeader  *page.FSegHeader
-		Infimum     *page.CompactInfimum
-		Supremum    *page.CompactSupremum
-		FILTrailer  *page.FILTrailer
+		FILHeader          *page.FILHeader
+		IndexHeader        *page.IndexHeader
+		FSegHeader         *page.FSegHeader
+		Infimum            interface{}
+		Supremum           interface{}
+		CompactRecordInfos []*page.CompactRecordInfo
+		FILTrailer         *page.FILTrailer
+	}
+
+	if t.IsCompact() {
+		b, _ := json.MarshalIndent(&Page{
+			FILHeader:          t.FilHeader(),
+			IndexHeader:        t.IndexHeader(),
+			FSegHeader:         t.FSegHeader(),
+			Infimum:            t.CompactInfimum(),
+			Supremum:           t.CompactSupremum(),
+			CompactRecordInfos: t.CompactRecordInfos(),
+			FILTrailer:         t.FILTrailer(),
+		}, "", "  ")
+		return string(b)
 	}
 
 	b, _ := json.MarshalIndent(&Page{
 		FILHeader:   t.FilHeader(),
 		IndexHeader: t.IndexHeader(),
 		FSegHeader:  t.FSegHeader(),
-		Infimum:     t.Infimum(),
-		Supremum:    t.Supremum(),
+		Infimum:     t.RedundantInfimum(),
+		Supremum:    t.RedundantSupremum(),
 		FILTrailer:  t.FILTrailer(),
 	}, "", "  ")
 	return string(b)

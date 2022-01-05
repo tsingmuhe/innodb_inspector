@@ -10,55 +10,25 @@ type FspHdrPage struct {
 }
 
 func (f *FspHdrPage) FSPHeader() *page.FSPHeader {
-	c := f.PageCursorAtBodyStart()
-	return &page.FSPHeader{
-		SpaceId:       c.Uint32(),
-		Unused:        c.Uint32(),
-		Size:          c.Uint32(),
-		FreeLimit:     c.Uint32(),
-		Flags:         c.Bytes(4),
-		FreeFragNUsed: c.Uint32(),
-		Free:          c.FlstBaseNode(),
-		FreeFrag:      c.FlstBaseNode(),
-		FullFrag:      c.FlstBaseNode(),
-		NextSegId:     c.Uint64(),
-		FullInodes:    c.FlstBaseNode(),
-		FreeInodes:    c.FlstBaseNode(),
-	}
+	return page.NewFSPHeader(f.pageBytes)
 }
 
 func (f *FspHdrPage) XDESEntry() []*page.XDESEntry {
-	c := f.PageCursorAt(150)
-
-	var xdesEntries []*page.XDESEntry
-
-	for i := uint32(0); i < 256; i++ {
-		xdesEntry := page.NewXDESEntry(i)
-		xdesEntry.SegmentId = c.Uint64()
-		xdesEntry.FlstNode = c.FlstNode()
-		xdesEntry.State = page.XDESState(c.Uint32())
-		xdesEntry.Bitmap = c.Bytes(16)
-
-		if xdesEntry.State > 0 {
-			xdesEntries = append(xdesEntries, xdesEntry)
-		}
-	}
-
-	return xdesEntries
+	return page.NewXDESEntrys(f.pageBytes)
 }
 
 func (f *FspHdrPage) HexEditorTags() []*page.HexEditorTag {
-	var result []*page.HexEditorTag
-	result = append(result, f.FilHeader().HexEditorTag())
-	result = append(result, f.FSPHeader().HexEditorTag())
+	var tags []*page.HexEditorTag
+	tags = append(tags, f.FilHeader().HexEditorTag())
+	tags = append(tags, f.FSPHeader().HexEditorTag())
 
 	xdesList := f.XDESEntry()
 	for _, xdes := range xdesList {
-		result = append(result, xdes.HexEditorTag())
+		tags = append(tags, xdes.HexEditorTag())
 	}
 
-	result = append(result, f.FILTrailer().HexEditorTag(len(f.pageBits)))
-	return result
+	tags = append(tags, f.FILTrailer().HexEditorTag())
+	return tags
 }
 
 func (f *FspHdrPage) String() string {

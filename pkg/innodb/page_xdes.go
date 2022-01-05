@@ -9,40 +9,24 @@ type XdesPage struct {
 	*BasePage
 }
 
-func (f *XdesPage) XDESEntry() []*page.XDESEntry {
-	c := f.PageCursorAt(150)
-
-	var xdesEntries []*page.XDESEntry
-
-	for i := 0; i < 256; i++ {
-		xdesEntry := page.NewXDESEntry(uint32(i))
-		xdesEntry.SegmentId = c.Uint64()
-		xdesEntry.FlstNode = c.FlstNode()
-		xdesEntry.State = page.XDESState(c.Uint32())
-		xdesEntry.Bitmap = c.Bytes(16)
-
-		if xdesEntry.State > 0 {
-			xdesEntries = append(xdesEntries, xdesEntry)
-		}
-	}
-
-	return xdesEntries
+func (t *XdesPage) XDESEntry() []*page.XDESEntry {
+	return page.NewXDESEntrys(t.pageBytes)
 }
 
-func (f *XdesPage) HexEditorTags() []*page.HexEditorTag {
-	var result []*page.HexEditorTag
-	result = append(result, f.FilHeader().HexEditorTag())
+func (t *XdesPage) HexEditorTags() []*page.HexEditorTag {
+	var tags []*page.HexEditorTag
+	tags = append(tags, t.FilHeader().HexEditorTag())
 
-	xdesList := f.XDESEntry()
+	xdesList := t.XDESEntry()
 	for _, xdes := range xdesList {
-		result = append(result, xdes.HexEditorTag())
+		tags = append(tags, xdes.HexEditorTag())
 	}
 
-	result = append(result, f.FILTrailer().HexEditorTag(len(f.pageBits)))
-	return result
+	tags = append(tags, t.FILTrailer().HexEditorTag())
+	return tags
 }
 
-func (f *XdesPage) String() string {
+func (t *XdesPage) String() string {
 	type Page struct {
 		FILHeader   *page.FILHeader
 		XDESEntries []*page.XDESEntry
@@ -50,9 +34,9 @@ func (f *XdesPage) String() string {
 	}
 
 	b, _ := json.MarshalIndent(&Page{
-		FILHeader:   f.FilHeader(),
-		XDESEntries: f.XDESEntry(),
-		FILTrailer:  f.FILTrailer(),
+		FILHeader:   t.FilHeader(),
+		XDESEntries: t.XDESEntry(),
+		FILTrailer:  t.FILTrailer(),
 	}, "", "  ")
 	return string(b)
 }

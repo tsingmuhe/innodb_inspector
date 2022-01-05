@@ -34,30 +34,51 @@ const (
 )
 
 type XDESEntry struct {
-	id uint32
+	buf *Buf
 
 	SegmentId uint64
 	FlstNode  *FlstNode
 	State     XDESState
-	Bitmap    Bits
+	Bitmap    []byte
 }
 
-func NewXDESEntry(id uint32) *XDESEntry {
-	return &XDESEntry{
-		id: id,
+func NewXDESEntrys(pageBytes []byte) []*XDESEntry {
+	from := FilHeaderSize + FSPHeaderSize
+
+	var xdesEntries []*XDESEntry
+
+	for i := 0; i < XDESEntryCountPerPage; i++ {
+		to := from + XDESEntrySize
+
+		buf := NewBuf(from, pageBytes[from:to], to-1)
+		xdesEntry := &XDESEntry{
+			buf:       buf,
+			SegmentId: buf.Uint64(),
+			FlstNode:  buf.FlstNode(),
+			State:     XDESState(buf.Uint32()),
+			Bitmap:    buf.Bytes(16),
+		}
+
+		if xdesEntry.State > 0 {
+			xdesEntries = append(xdesEntries, xdesEntry)
+		}
+
+		from = to
 	}
+
+	return xdesEntries
 }
 
 func (t *XDESEntry) HexEditorTag() *HexEditorTag {
-	from := FSPHeaderPosition + FSPHeaderSize + t.id*XDESEntrySize
+	id := (t.buf.from - FilHeaderSize - FSPHeaderSize) / XDESEntrySize
 	color := "yellow"
-	if t.id%2 == 1 {
+	if id%2 == 1 {
 		color = "lime"
 	}
 
 	return &HexEditorTag{
-		From:    from,
-		To:      from + XDESEntrySize - 1,
+		From:    t.buf.from,
+		To:      t.buf.to,
 		Color:   color,
 		Caption: "XDESEntry",
 	}

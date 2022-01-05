@@ -1,6 +1,9 @@
 package innodb
 
-import "innodb_inspector/pkg/innodb/page"
+import (
+	"innodb_inspector/pkg/innodb/page"
+	"innodb_inspector/pkg/innodb/tablespace"
+)
 
 type Page interface {
 	FSPHeaderSpaceId() uint32
@@ -26,14 +29,14 @@ type Page interface {
 type BasePage struct {
 	fspHeaderSpaceId uint32
 	pageNo           uint32
-	pageBits         []byte
+	pageBytes        []byte
 }
 
-func NewBasePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) *BasePage {
+func NewBasePage(fspHeaderSpaceId, pageNo uint32, pageBytes []byte) *BasePage {
 	return &BasePage{
 		fspHeaderSpaceId: fspHeaderSpaceId,
 		pageNo:           pageNo,
-		pageBits:         pageBits,
+		pageBytes:        pageBytes,
 	}
 }
 
@@ -67,42 +70,28 @@ func (f *BasePage) IsSysTablespace() bool {
 
 func (f *BasePage) IsDoubleWriteBufferBlock() bool {
 	return f.fspHeaderSpaceId == 0 &&
-		f.pageNo >= page.DoubleWriteBufferPageNo1 &&
-		f.pageNo < page.DoubleWriteBufferPageNo2
+		f.pageNo >= tablespace.DoubleWriteBufferPageNo1 &&
+		f.pageNo < tablespace.DoubleWriteBufferPageNo2
 }
 
 func (f *BasePage) PageCursor() *PageCursor {
-	return NewPageCursor(f.pageBits)
+	return NewPageCursor(f.pageBytes)
 }
 
 func (f *BasePage) PageCursorAt(position uint32) *PageCursor {
-	return NewPageCursor(f.pageBits).SetReaderIndex(position)
+	return NewPageCursor(f.pageBytes).SetReaderIndex(position)
 }
 
 func (f *BasePage) PageCursorAtBodyStart() *PageCursor {
-	return NewPageCursor(f.pageBits).SetReaderIndex(page.FilHeaderSize)
+	return NewPageCursor(f.pageBytes).SetReaderIndex(page.FilHeaderSize)
 }
 
 func (f *BasePage) FilHeader() *page.FILHeader {
-	c := f.PageCursor()
-	return &page.FILHeader{
-		FilPageSpaceOrChksum:      c.Uint32(),
-		FilPageOffset:             c.Uint32(),
-		FilPagePrev:               c.Uint32(),
-		FilPageNext:               c.Uint32(),
-		FilPageLSN:                c.Uint64(),
-		FilPageType:               page.Type(c.Uint16()),
-		FilPageFileFlushLSN:       c.Uint64(),
-		FilPageArchLogNoOrSpaceId: c.Uint32(),
-	}
+	return page.NewFILHeader(f.pageBytes)
 }
 
 func (f *BasePage) FILTrailer() *page.FILTrailer {
-	c := f.PageCursorAt(uint32(len(f.pageBits)) - page.FilTrailerSize)
-	return &page.FILTrailer{
-		OldStyleChecksum: c.Uint32(),
-		Low32BitsOfLSN:   c.Uint32(),
-	}
+	return page.NewFILTrailer(f.pageBytes)
 }
 
 func IsUndefinedPageNo(pageNo uint32) bool {

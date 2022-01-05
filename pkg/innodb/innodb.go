@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"innodb_inspector/pkg/innodb/page"
+	"innodb_inspector/pkg/innodb/tablespace"
 	"io"
 	"os"
 )
@@ -27,15 +28,15 @@ func ParsePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) Page {
 		}
 	case page.FilPageTypeSys:
 		switch pageNo {
-		case page.InsertBufferHeaderPageNo:
+		case tablespace.InsertBufferHeaderPageNo:
 			return &IBufHeaderPage{
 				BasePage: basePage,
 			}
-		case page.FirstRollbackSegmentPageNo:
+		case tablespace.FirstRollbackSegmentPageNo:
 			return &SysRsegHeaderPage{
 				BasePage: basePage,
 			}
-		case page.DataDictionaryHeaderPageNo:
+		case tablespace.DataDictionaryHeaderPageNo:
 			return &DictionaryHeaderPage{
 				BasePage: basePage,
 			}
@@ -44,10 +45,6 @@ func ParsePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) Page {
 		}
 	case page.FilPageIndex:
 		return &IndexPage{
-			BasePage: basePage,
-		}
-	case page.FilPageTypeBlob:
-		return &BlobPage{
 			BasePage: basePage,
 		}
 	default:
@@ -113,26 +110,26 @@ func pageNotes(pg Page) string {
 		switch pageNo {
 		case 0:
 			return "system tablespace"
-		case page.InsertBufferHeaderPageNo:
+		case tablespace.InsertBufferHeaderPageNo:
 			return "insert buffer header"
-		case page.InsertBufferRootPageNo:
+		case tablespace.InsertBufferRootPageNo:
 			return "insert buffer root page"
-		case page.TransactionSystemHeaderPageNo:
+		case tablespace.TransactionSystemHeaderPageNo:
 			return "transaction system header"
-		case page.FirstRollbackSegmentPageNo:
+		case tablespace.FirstRollbackSegmentPageNo:
 			return "first rollback segment"
-		case page.DataDictionaryHeaderPageNo:
+		case tablespace.DataDictionaryHeaderPageNo:
 			return "data dictionary header"
 		}
 
-		if pageNo >= page.DoubleWriteBufferPageNo1 && pageNo < page.DoubleWriteBufferPageNo2 {
+		if pageNo >= tablespace.DoubleWriteBufferPageNo1 && pageNo < tablespace.DoubleWriteBufferPageNo2 {
 			return "double write buffer block"
 		}
 	} else {
 		switch pageNo {
-		case page.RootPageOfFirstIndexPageNo:
+		case tablespace.RootPageOfFirstIndexPageNo:
 			return "root page of first index"
-		case page.RootPageOfSecondIndexPageNo:
+		case tablespace.RootPageOfSecondIndexPageNo:
 			return "root page of second index"
 		}
 	}
