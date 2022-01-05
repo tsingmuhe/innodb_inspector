@@ -1,6 +1,7 @@
 package innodb
 
 import (
+	"encoding/binary"
 	"innodb_inspector/pkg/innodb/page"
 	"innodb_inspector/pkg/innodb/tablespace"
 )
@@ -11,19 +12,14 @@ type Page interface {
 	PageNo() uint32
 	Type() page.Type
 
-	String() string
-
-	HexEditorTags() []*page.HexEditorTag
-
 	IsSysTablespace() bool
 	IsDoubleWriteBufferBlock() bool
 
-	PageCursor() *PageCursor
-	PageCursorAt(position uint32) *PageCursor
-	PageCursorAtBodyStart() *PageCursor
-
 	FilHeader() *page.FILHeader
 	FILTrailer() *page.FILTrailer
+
+	String() string
+	HexEditorTags() []*page.HexEditorTag
 }
 
 type BasePage struct {
@@ -40,58 +36,47 @@ func NewBasePage(fspHeaderSpaceId, pageNo uint32, pageBytes []byte) *BasePage {
 	}
 }
 
-func (f *BasePage) FSPHeaderSpaceId() uint32 {
-	return f.fspHeaderSpaceId
+func (t *BasePage) FSPHeaderSpaceId() uint32 {
+	return t.fspHeaderSpaceId
 }
 
-func (f *BasePage) SpaceId() uint32 {
-	return f.PageCursorAt(34).Uint32()
+func (t *BasePage) SpaceId() uint32 {
+	return binary.BigEndian.Uint32(t.pageBytes[34:38])
 }
 
-func (f *BasePage) PageNo() uint32 {
-	return f.pageNo
+func (t *BasePage) PageNo() uint32 {
+	return t.pageNo
 }
 
-func (f *BasePage) Type() page.Type {
-	return page.Type(f.PageCursorAt(24).Uint16())
+func (t *BasePage) Type() page.Type {
+	b := t.pageBytes[24:26]
+	return page.Type(binary.BigEndian.Uint16(b))
 }
 
-func (f *BasePage) String() string {
+func (t *BasePage) IsSysTablespace() bool {
+	return t.fspHeaderSpaceId == 0
+}
+
+func (t *BasePage) IsDoubleWriteBufferBlock() bool {
+	return t.fspHeaderSpaceId == 0 &&
+		t.pageNo >= tablespace.DoubleWriteBufferPageNo1 &&
+		t.pageNo < tablespace.DoubleWriteBufferPageNo2
+}
+
+func (t *BasePage) FilHeader() *page.FILHeader {
+	return page.NewFILHeader(t.pageBytes)
+}
+
+func (t *BasePage) FILTrailer() *page.FILTrailer {
+	return page.NewFILTrailer(t.pageBytes)
+}
+
+func (t *BasePage) String() string {
 	return ""
 }
 
-func (f *BasePage) HexEditorTags() []*page.HexEditorTag {
-	return nil
-}
-
-func (f *BasePage) IsSysTablespace() bool {
-	return f.fspHeaderSpaceId == 0
-}
-
-func (f *BasePage) IsDoubleWriteBufferBlock() bool {
-	return f.fspHeaderSpaceId == 0 &&
-		f.pageNo >= tablespace.DoubleWriteBufferPageNo1 &&
-		f.pageNo < tablespace.DoubleWriteBufferPageNo2
-}
-
-func (f *BasePage) PageCursor() *PageCursor {
-	return NewPageCursor(f.pageBytes)
-}
-
-func (f *BasePage) PageCursorAt(position uint32) *PageCursor {
-	return NewPageCursor(f.pageBytes).SetReaderIndex(position)
-}
-
-func (f *BasePage) PageCursorAtBodyStart() *PageCursor {
-	return NewPageCursor(f.pageBytes).SetReaderIndex(page.FilHeaderSize)
-}
-
-func (f *BasePage) FilHeader() *page.FILHeader {
-	return page.NewFILHeader(f.pageBytes)
-}
-
-func (f *BasePage) FILTrailer() *page.FILTrailer {
-	return page.NewFILTrailer(f.pageBytes)
+func (t *BasePage) HexEditorTags() []*page.HexEditorTag {
+	return make([]*page.HexEditorTag, 0)
 }
 
 func IsUndefinedPageNo(pageNo uint32) bool {

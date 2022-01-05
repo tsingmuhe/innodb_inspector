@@ -28,14 +28,6 @@ func ParsePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) Page {
 		}
 	case page.FilPageTypeSys:
 		switch pageNo {
-		case tablespace.InsertBufferHeaderPageNo:
-			return &IBufHeaderPage{
-				BasePage: basePage,
-			}
-		case tablespace.FirstRollbackSegmentPageNo:
-			return &SysRsegHeaderPage{
-				BasePage: basePage,
-			}
 		case tablespace.DataDictionaryHeaderPageNo:
 			return &DictionaryHeaderPage{
 				BasePage: basePage,

@@ -10,29 +10,15 @@ type DictionaryHeaderPage struct {
 }
 
 func (t *DictionaryHeaderPage) DictionaryHeader() *page.DictionaryHeader {
-	c := t.PageCursorAtBodyStart()
-	dictionaryHeader := &page.DictionaryHeader{
-		DictHdrRowId:      c.Uint64(),
-		DictHdrTableId:    c.Uint64(),
-		DictHdrIndexId:    c.Uint64(),
-		DictHdrMaxSpaceId: c.Uint32(),
-		DictHdrMixIdLow:   c.Uint32(),
-		DictHdrTables:     c.Uint32(),
-		DictHdrTableIds:   c.Uint32(),
-		DictHdrColumns:    c.Uint32(),
-		DictHdrIndexes:    c.Uint32(),
-		DictHdrFields:     c.Uint32(),
-	}
+	return page.NewDictionaryHeader(t.pageBytes)
+}
 
-	c.SkipBytes(4)
-
-	dictionaryHeader.FsegEntry = &page.FsegEntry{
-		FsegHdrSpace:  c.Uint32(),
-		FsegHdrPageNo: c.Uint32(),
-		FsegHdrOffset: c.Uint16(),
-	}
-
-	return dictionaryHeader
+func (t *DictionaryHeaderPage) HexEditorTags() []*page.HexEditorTag {
+	var result []*page.HexEditorTag
+	result = append(result, t.FilHeader().HexEditorTag())
+	result = append(result, t.DictionaryHeader().HexEditorTag())
+	result = append(result, t.FILTrailer().HexEditorTag())
+	return result
 }
 
 func (t *DictionaryHeaderPage) String() string {
