@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"innodb_inspector/pkg/innodb/page"
+	"os"
 )
 
 type IndexPage struct {
@@ -120,6 +121,9 @@ func (t *IndexPage) IndexRecord(offset uint32) *page.IndexRecord {
 
 func (t *IndexPage) String() string {
 	fmt.Println(t.Records())
+
+	file, _ := os.Create("output.bin")
+	file.Write(t.pageBits)
 
 	type Page struct {
 		FILHeader   *page.FILHeader
