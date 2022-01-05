@@ -88,16 +88,3 @@ func (t *PageCursor) FlstBaseNode() *page.FlstBaseNode {
 		},
 	}
 }
-
-func (t *PageCursor) FlstNode() *page.FlstNode {
-	return &page.FlstNode{
-		Pre: &page.FlstAddress{
-			PageNo: t.Uint32(),
-			Offset: t.Uint16(),
-		},
-		Next: &page.FlstAddress{
-			PageNo: t.Uint32(),
-			Offset: t.Uint16(),
-		},
-	}
-}
