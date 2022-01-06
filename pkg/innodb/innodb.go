@@ -1,15 +1,22 @@
 package innodb
 
 import (
+	"bufio"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"innodb_inspector/pkg/innodb/page"
 	"innodb_inspector/pkg/innodb/tablespace"
-	"io"
 	"os"
 )
 
-func ParsePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) Page {
+func resolveFspHeaderSpaceId(f *os.File) uint32 {
+	b := make([]byte, 4)
+	f.ReadAt(b, 34)
+	return binary.BigEndian.Uint32(b)
+}
+
+func parsePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) Page {
 	basePage := NewBasePage(fspHeaderSpaceId, pageNo, pageBits)
 
 	pageType := basePage.Type()
@@ -44,31 +51,6 @@ func ParsePage(fspHeaderSpaceId, pageNo uint32, pageBits []byte) Page {
 	}
 }
 
-func PageDetail(filePath string, targetPageNo, pageSize uint32, exportPath string) (string, error) {
-	fspHeaderSpaceId := resolveFspHeaderSpaceId(filePath, pageSize)
-
-	var result string
-
-	forEachPage(filePath, pageSize, func(pageNo uint32, bytes []byte) (bool, error) {
-		if pageNo == targetPageNo {
-			pg := ParsePage(fspHeaderSpaceId, targetPageNo, bytes)
-			result = pg.String()
-			if exportPath != "" {
-				file, _ := os.Create(exportPath)
-				file.Write(bytes)
-
-				tags, _ := json.Marshal(pg.HexEditorTags())
-				tagFile, _ := os.Create(exportPath + ".tags")
-				tagFile.WriteString(string(tags))
-			}
-			return true, nil
-		}
-		return false, nil
-	})
-
-	return result, nil
-}
-
 type PageDesc struct {
 	PageNo    uint32
 	PageType  page.Type
@@ -76,21 +58,48 @@ type PageDesc struct {
 	PageNotes string
 }
 
-func OverView(filePath string, pageSize uint32) ([]*PageDesc, error) {
-	fspHeaderSpaceId := resolveFspHeaderSpaceId(filePath, pageSize)
+func OverView(name string, pageSize int) ([]*PageDesc, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	fspHeaderSpaceId := resolveFspHeaderSpaceId(f)
+	return scanPage(f, fspHeaderSpaceId, pageSize)
+}
+
+func scanPage(f *os.File, fspHeaderSpaceId uint32, pageSize int) ([]*PageDesc, error) {
+	s := bufio.NewScanner(f)
+	s.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if atEOF {
+			return 0, nil, nil
+		}
+
+		if len(data) >= pageSize {
+			return pageSize, data[0:pageSize], nil
+		}
+
+		return 0, nil, nil
+	})
 
 	var pds []*PageDesc
 
-	forEachPage(filePath, pageSize, func(pageNo uint32, bytes []byte) (bool, error) {
-		pg := ParsePage(fspHeaderSpaceId, pageNo, bytes)
+	var i uint32
+	for i = 0; s.Scan(); i++ {
+		b := s.Bytes()
+		if len(b) != pageSize {
+			return nil, errors.New("invalid page bytes")
+		}
+
+		pg := parsePage(fspHeaderSpaceId, i, b)
 		pds = append(pds, &PageDesc{
 			PageNo:    pg.PageNo(),
 			PageType:  pg.Type(),
 			SpaceId:   pg.SpaceId(),
 			PageNotes: pageNotes(pg),
 		})
-		return false, nil
-	})
+	}
 
 	return pds, nil
 }
@@ -136,46 +145,28 @@ func pageNotes(pg Page) string {
 	return ""
 }
 
-func resolveFspHeaderSpaceId(filePath string, pageSize uint32) uint32 {
-	var fspHeaderSpaceId uint32
-
-	forEachPage(filePath, pageSize, func(pageNo uint32, bytes []byte) (bool, error) {
-		fspHeaderSpaceId = binary.BigEndian.Uint32(bytes[34:38])
-		pg := NewBasePage(0, pageNo, bytes)
-		fspHeaderSpaceId = pg.SpaceId()
-		return true, nil
-	})
-
-	return fspHeaderSpaceId
-}
-
-func forEachPage(filePath string, pageSize uint32, handle func(uint32, []byte) (bool, error)) error {
-	f, err := os.Open(filePath)
+func PageDetail(name string, targetPageNo, pageSize uint32, exportPath string) (string, error) {
+	f, err := os.Open(name)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer f.Close()
 
-	buf := make([]byte, pageSize)
-	var pageNo uint32
+	fspHeaderSpaceId := resolveFspHeaderSpaceId(f)
 
-	for {
-		switch n, err := f.Read(buf); true {
-		case n > 0:
-			breakLoop, err := handle(pageNo, buf)
-			if err != nil {
-				return err
-			}
+	b := make([]byte, pageSize)
+	off := int64(targetPageNo * pageSize)
+	f.ReadAt(b, off)
 
-			if breakLoop {
-				return nil
-			}
-		case n == 0 && err == io.EOF: // EOF
-			return nil
-		case err != nil:
-			return err
-		}
+	pg := parsePage(fspHeaderSpaceId, targetPageNo, b)
+	if exportPath != "" {
+		file, _ := os.Create(exportPath)
+		file.Write(b)
 
-		pageNo++
+		tags, _ := json.Marshal(pg.HexEditorTags())
+		tagFile, _ := os.Create(exportPath + ".tags")
+		tagFile.WriteString(string(tags))
 	}
+
+	return pg.String(), nil
 }

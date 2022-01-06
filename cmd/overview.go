@@ -10,7 +10,7 @@ import (
 )
 
 func overView(cmd *cobra.Command, filePath string) error {
-	pds, err := innodb.OverView(filePath, page.DefaultSize)
+	pds, err := innodb.OverView(filePath, int(page.DefaultSize))
 	if err != nil {
 		return errors.New("bad innodb file")
 	}
