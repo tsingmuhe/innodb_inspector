@@ -35,7 +35,7 @@ func NewFILHeader(pageBytes []byte) *FILHeader {
 		FilPagePrev:               buf.Uint32(),
 		FilPageNext:               buf.Uint32(),
 		FilPageLSN:                buf.Uint64(),
-		FilPageType:               Type(buf.Uint32()),
+		FilPageType:               Type(buf.Uint16()),
 		FilPageFileFlushLSN:       buf.Uint64(),
 		FilPageArchLogNoOrSpaceId: buf.Uint32(),
 	}

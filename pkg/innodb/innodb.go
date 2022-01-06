@@ -70,7 +70,9 @@ func OverView(name string, pageSize int) ([]*PageDesc, error) {
 }
 
 func scanPage(f *os.File, fspHeaderSpaceId uint32, pageSize int) ([]*PageDesc, error) {
+	buf := make([]byte, pageSize)
 	s := bufio.NewScanner(f)
+	s.Buffer(buf, pageSize)
 	s.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if atEOF {
 			return 0, nil, nil
@@ -155,9 +157,12 @@ func PageDetail(name string, targetPageNo, pageSize uint32, exportPath string) (
 	fspHeaderSpaceId := resolveFspHeaderSpaceId(f)
 
 	b := make([]byte, pageSize)
-	off := int64(targetPageNo * pageSize)
-	f.ReadAt(b, off)
-
+	off := int64(targetPageNo) * int64(pageSize)
+	_, err = f.ReadAt(b, off)
+	if err != nil {
+		return "", err
+	}
+	
 	pg := parsePage(fspHeaderSpaceId, targetPageNo, b)
 	if exportPath != "" {
 		file, _ := os.Create(exportPath)
