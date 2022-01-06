@@ -162,7 +162,7 @@ func PageDetail(name string, targetPageNo, pageSize uint32, exportPath string) (
 	if err != nil {
 		return "", err
 	}
-	
+
 	pg := parsePage(fspHeaderSpaceId, targetPageNo, b)
 	if exportPath != "" {
 		file, _ := os.Create(exportPath)
