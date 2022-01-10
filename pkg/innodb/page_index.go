@@ -81,7 +81,7 @@ func (t *IndexPage) FreeCompactRecordInfos() []*page.CompactRecordInfo {
 
 func (t *IndexPage) HexEditorTags() []*page.HexEditorTag {
 	var tags []*page.HexEditorTag
-	tags = append(tags, t.FilHeader().HexEditorTag())
+	tags = append(tags, t.FilHeader().HexEditorTag()...)
 	tags = append(tags, t.IndexHeader().HexEditorTag())
 	tags = append(tags, t.FSegHeader().HexEditorTag())
 

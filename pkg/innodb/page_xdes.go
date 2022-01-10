@@ -15,7 +15,7 @@ func (t *XdesPage) XDESEntry() []*page.XDESEntry {
 
 func (t *XdesPage) HexEditorTags() []*page.HexEditorTag {
 	var tags []*page.HexEditorTag
-	tags = append(tags, t.FilHeader().HexEditorTag())
+	tags = append(tags, t.FilHeader().HexEditorTag()...)
 
 	xdesList := t.XDESEntry()
 	for _, xdes := range xdesList {

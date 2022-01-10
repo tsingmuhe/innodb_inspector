@@ -19,7 +19,7 @@ func (f *FspHdrPage) XDESEntry() []*page.XDESEntry {
 
 func (f *FspHdrPage) HexEditorTags() []*page.HexEditorTag {
 	var tags []*page.HexEditorTag
-	tags = append(tags, f.FilHeader().HexEditorTag())
+	tags = append(tags, f.FilHeader().HexEditorTag()...)
 	tags = append(tags, f.FSPHeader().HexEditorTag())
 
 	xdesList := f.XDESEntry()

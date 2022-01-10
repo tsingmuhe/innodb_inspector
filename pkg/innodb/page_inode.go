@@ -23,7 +23,7 @@ func (t *InodePage) InodeEntry() []*page.InodeEntry {
 
 func (t *InodePage) HexEditorTags() []*page.HexEditorTag {
 	var result []*page.HexEditorTag
-	result = append(result, t.FilHeader().HexEditorTag())
+	result = append(result, t.FilHeader().HexEditorTag()...)
 
 	inodeList := t.InodeEntry()
 	for _, inode := range inodeList {

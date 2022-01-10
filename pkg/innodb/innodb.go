@@ -66,10 +66,19 @@ func OverView(name string, pageSize int) ([]*PageDesc, error) {
 	defer f.Close()
 
 	fspHeaderSpaceId := resolveFspHeaderSpaceId(f)
-	return scanPage(f, fspHeaderSpaceId, pageSize)
+	pageDesces, tags, err := scanPage(f, fspHeaderSpaceId, pageSize)
+	if err != nil {
+		return nil, err
+	}
+
+	tagsStr, _ := json.Marshal(tags)
+	tagFile, _ := os.Create(name + ".tags")
+	tagFile.WriteString(string(tagsStr))
+
+	return pageDesces, nil
 }
 
-func scanPage(f *os.File, fspHeaderSpaceId uint32, pageSize int) ([]*PageDesc, error) {
+func scanPage(f *os.File, fspHeaderSpaceId uint32, pageSize int) ([]*PageDesc, []*page.HexEditorTag, error) {
 	buf := make([]byte, pageSize)
 	s := bufio.NewScanner(f)
 	s.Buffer(buf, pageSize)
@@ -86,12 +95,13 @@ func scanPage(f *os.File, fspHeaderSpaceId uint32, pageSize int) ([]*PageDesc, e
 	})
 
 	var pds []*PageDesc
+	var tags []*page.HexEditorTag
 
 	var i uint32
 	for i = 0; s.Scan(); i++ {
 		b := s.Bytes()
 		if len(b) != pageSize {
-			return nil, errors.New("invalid page bytes")
+			return nil, nil, errors.New("invalid page bytes")
 		}
 
 		pg := parsePage(fspHeaderSpaceId, i, b)
@@ -101,9 +111,20 @@ func scanPage(f *os.File, fspHeaderSpaceId uint32, pageSize int) ([]*PageDesc, e
 			SpaceId:   pg.SpaceId(),
 			PageNotes: pageNotes(pg),
 		})
+
+		color := "red"
+		if i%2 == 1 {
+			color = "orange"
+		}
+		tags = append(tags, &page.HexEditorTag{
+			From:    i * uint32(pageSize),
+			To:      (i+1)*uint32(pageSize) - 1,
+			Color:   color,
+			Caption: "",
+		})
 	}
 
-	return pds, nil
+	return pds, tags, nil
 }
 
 func pageNotes(pg Page) string {
@@ -132,8 +153,6 @@ func pageNotes(pg Page) string {
 		switch pageNo {
 		case tablespace.RootPageOfFirstIndexPageNo:
 			return "root page of first index"
-		case tablespace.RootPageOfSecondIndexPageNo:
-			return "root page of second index"
 		}
 	}
 

@@ -31,7 +31,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.Flags().StringVarP(&filePath, "file", "f", "", "file path")
 	rootCmd.Flags().Int32VarP(&pageNo, "page", "p", -1, "page no")
-	rootCmd.Flags().StringVar(&exportPath, "export", "", "export page binary")
+	rootCmd.Flags().StringVarP(&exportPath, "export", "e", "", "export page binary")
 }
 
 func Execute() {

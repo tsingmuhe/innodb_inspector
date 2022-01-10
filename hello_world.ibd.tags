@@ -1,0 +1,1 @@
+[{"from":0,"to":16383,"color":"red","caption":""},{"from":16384,"to":32767,"color":"orange","caption":""},{"from":32768,"to":49151,"color":"red","caption":""},{"from":49152,"to":65535,"color":"orange","caption":""},{"from":65536,"to":81919,"color":"red","caption":""},{"from":81920,"to":98303,"color":"orange","caption":""},{"from":98304,"to":114687,"color":"red","caption":""}]

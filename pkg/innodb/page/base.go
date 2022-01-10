@@ -41,13 +41,25 @@ func NewFILHeader(pageBytes []byte) *FILHeader {
 	}
 }
 
-func (t *FILHeader) HexEditorTag() *HexEditorTag {
-	return &HexEditorTag{
+func (t *FILHeader) HexEditorTag() []*HexEditorTag {
+	var tags []*HexEditorTag
+	tags = append(tags, &HexEditorTag{
 		From:    t.buf.from,
+		To:      t.buf.from + 23,
+		Color:   "red",
+		Caption: "FILHeader",
+	}, &HexEditorTag{
+		From:    t.buf.from + 24,
+		To:      t.buf.from + 25,
+		Color:   "green",
+		Caption: "FILHeader",
+	}, &HexEditorTag{
+		From:    t.buf.from + 26,
 		To:      t.buf.to,
 		Color:   "red",
 		Caption: "FILHeader",
-	}
+	})
+	return tags
 }
 
 const (

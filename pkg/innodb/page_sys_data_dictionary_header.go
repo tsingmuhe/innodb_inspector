@@ -15,7 +15,7 @@ func (t *DictionaryHeaderPage) DictionaryHeader() *page.DictionaryHeader {
 
 func (t *DictionaryHeaderPage) HexEditorTags() []*page.HexEditorTag {
 	var result []*page.HexEditorTag
-	result = append(result, t.FilHeader().HexEditorTag())
+	result = append(result, t.FilHeader().HexEditorTag()...)
 	result = append(result, t.DictionaryHeader().HexEditorTag())
 	result = append(result, t.FILTrailer().HexEditorTag())
 	return result

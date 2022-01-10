@@ -28,25 +28,25 @@ type Type uint16
 func (t Type) String() string {
 	switch t {
 	case FilPageTypeAllocated:
-		return "FIL_PAGE_TYPE_ALLOCATED"
+		return "Freshly allocated page"
 	case FilPageUndoLog:
-		return "FIL_PAGE_UNDO_LOG"
+		return "Undo log page"
 	case FilPageInode:
-		return "FIL_PAGE_INODE"
+		return "Inode page"
 	case FilPageIbufFreeList:
-		return "FIL_PAGE_IBUF_FREE_LIST"
+		return "Insert buffer free list page"
 	case FilPageIbufBitmap:
-		return "FIL_PAGE_IBUF_BITMAP"
+		return "Insert buffer bitmap"
 	case FilPageTypeSys:
-		return "FIL_PAGE_TYPE_SYS"
+		return "System page"
 	case FilPageTypeTrxSys:
-		return "FIL_PAGE_TYPE_TRX_SYS"
+		return "Transaction system page"
 	case FilPageTypeFspHdr:
-		return "FIL_PAGE_TYPE_FSP_HDR"
+		return "File Space Header"
 	case FilPageTypeXdes:
-		return "FIL_PAGE_TYPE_XDES"
+		return "Extent descriptor page"
 	case FilPageTypeBlob:
-		return "FIL_PAGE_TYPE_BLOB"
+		return "BLOB page"
 	case FilPageTypeZblob:
 		return "FIL_PAGE_TYPE_ZBLOB"
 	case FilPageTypeZblob2:
@@ -54,7 +54,7 @@ func (t Type) String() string {
 	case FilPageTypeUnknown:
 		return "FIL_PAGE_TYPE_UNKNOWN"
 	case FilPageCompressed:
-		return "FIL_PAGE_COMPRESSED"
+		return "Compressed BLOB page"
 	case FilPageEncrypted:
 		return "FIL_PAGE_ENCRYPTED"
 	case FilPageCompressedAndEncrypted:
@@ -62,12 +62,12 @@ func (t Type) String() string {
 	case FilPageEncryptedRtree:
 		return "FIL_PAGE_ENCRYPTED_RTREE"
 	case FilPageIndex:
-		return "FIL_PAGE_INDEX"
+		return "Index page"
 	case FilPageRtree:
 		return "FIL_PAGE_RTREE"
 	}
 
-	return "unknown page type"
+	return "Other type of page"
 }
 
 func (t Type) MarshalText() ([]byte, error) {
